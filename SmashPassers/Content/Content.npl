@@ -1,0 +1,66 @@
+{
+	"references": [],
+	"content": {
+		"textures": {
+			"path": "Images/*.png",
+			"recursive": "True",
+			"action": "build",
+			"importer": "TextureImporter",
+			"processor": "TextureProcessor",
+			"processorParam": {
+				"ColorKeyColor": "255,0,255,255",
+				"ColorKeyEnabled": "True",
+				"GenerateMipmaps": "False",
+				"PremultiplyAlpha": "True",
+				"ResizeToPowerOfTwo": "False",
+				"MakeSquare": "False",
+				"TextureFormat": "Color"
+			}
+		},
+		"fonts": {
+			"path": "Fonts/*.spritefont",
+			"recursive": "True",
+			"action": "build",
+			"importer": "FontDescriptionImporter",
+			"processor": "FontDescriptionProcessor",
+			"processorParam": {
+				"PremultiplyAlpha": "True",
+				"TextureFormat": "Color"
+			}
+		},
+		"audio": {
+			"path": "Audio/*.wav",
+			"recursive": "True",
+			"action": "build",
+			"importer": "WavImporter",
+			"processor": "SoundEffectProcessor",
+			"processorParam": {
+				"Quality": "Best"
+			}
+		},
+		"levels": {
+			"path": "Levels/*.json",
+			"recursive": "True",
+			"action": "copy"
+		},
+		"effects": {
+			"path": "Effects/*.fx",
+			"recursive": "True",
+			"action": "build",
+			"importer": "EffectImporter",
+			"processor": "EffectProcessor",
+			"processorParam": {
+				"Debug": "Auto"
+			}
+		},
+		"colorArray": {
+			"path": "Images/*.bin",
+			"recursive": "True",
+			"action": "copy"
+		},
+		"localization": {
+			"path": "Localization/*.json",
+			"action": "copy"
+		}
+	}
+}

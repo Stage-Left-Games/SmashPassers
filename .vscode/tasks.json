@@ -7,7 +7,7 @@
             "type": "process",
             "args": [
                 "build",
-                "${workspaceFolder}/Beebo/Beebo.csproj",
+                "${workspaceFolder}/SmashPassers/SmashPassers.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary;ForceNoAlign"
             ],
@@ -22,7 +22,7 @@
             "type": "process",
             "args": [
                 "publish",
-                "${workspaceFolder}/Beebo/Beebo.csproj",
+                "${workspaceFolder}/SmashPassers/SmashPassers.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary;ForceNoAlign"
             ],
@@ -36,7 +36,7 @@
                 "watch",
                 "run",
                 "--project",
-                "${workspaceFolder}/Beebo/Beebo.csproj"
+                "${workspaceFolder}/SmashPassers/SmashPassers.csproj"
             ],
             "problemMatcher": "$msCompile"
         }
