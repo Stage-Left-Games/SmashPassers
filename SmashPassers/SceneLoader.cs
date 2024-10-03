@@ -20,18 +20,33 @@ public static class SceneLoader
                     Width = Renderer.ScreenSize.X,
                     Height = Renderer.ScreenSize.Y,
                     Entities = {
+                        // new Entity {
+                        //     Position = new(220, 400),
+                        //     Depth = 50,
+                        //     Components = {
+                        //         new SpriteComponent {
+                        //             TexturePath = "Images/Characters/neco/neco_0-0",
+                        //             Pivot = new(240, 332),
+                        //         },
+                        //         new Components.PlayerBase {
+                        //             HitboxOffset = new(-32/2, -68),
+                        //             Width = 32,
+                        //             Height = 68
+                        //         }
+                        //     },
+                        // },
                         new Entity {
                             Position = new(220, 400),
                             Depth = 50,
                             Components = {
                                 new SpriteComponent {
-                                    TexturePath = "Images/Characters/neco/neco_0-0",
+                                    TexturePath = "Images/Characters/miki/miki_0-0",
                                     Pivot = new(240, 332),
                                 },
                                 new Components.PlayerBase {
-                                    HitboxOffset = new(-32/2, -68),
-                                    Width = 32,
-                                    Height = 68
+                                    HitboxOffset = new(-128/2, -304),
+                                    Width = 128,
+                                    Height = 304
                                 }
                             },
                         },
