@@ -2,6 +2,7 @@ using Microsoft.Xna.Framework;
 
 using Jelly;
 using Jelly.Components;
+using Jelly.Graphics;
 
 namespace SmashPassers;
 
@@ -16,29 +17,29 @@ public static class SceneLoader
             {
                 scene = new() {
                     Name = "Title",
+                    Width = Renderer.ScreenSize.X,
+                    Height = Renderer.ScreenSize.Y,
                     Entities = {
                         new Entity {
-                            Position = new(200, 300),
+                            Position = new(220, 400),
                             Depth = 50,
                             Components = {
                                 new SpriteComponent {
-                                    TexturePath = "Images/arc_0-0",
-                                    Pivot = new(480, 644)
+                                    TexturePath = "Images/Characters/neco/neco_0-0",
+                                    Pivot = new(240, 332),
+                                },
+                                new Components.PlayerBase {
+                                    HitboxOffset = new(-32/2, -68),
+                                    Width = 32,
+                                    Height = 68
                                 }
-                            }
+                            },
                         },
-                        new Entity {
-                            Position = new(400, 300),
-                            Depth = 50,
-                            Components = {
-                                new SpriteComponent {
-                                    TexturePath = "Images/neco_0-0",
-                                    Pivot = new(480, 644)
-                                }
-                            }
-                        }
-                    }
+                    },
                 };
+
+                for(int i = 0; i < scene.CollisionSystem.Width; i++)
+                    scene.CollisionSystem.SetTile(1, new(i, scene.CollisionSystem.Height - 1));
                 break;
             }
             default:

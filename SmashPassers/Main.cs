@@ -6,6 +6,7 @@ using Microsoft.Xna.Framework.Input;
 
 using Jelly;
 using Jelly.Graphics;
+using System.Collections.Generic;
 
 namespace SmashPassers;
 
@@ -14,12 +15,11 @@ public class Main : Game
     private GraphicsDeviceManager _graphics;
 
     private static Camera camera;
+    private static Scene Scene => SceneManager.ActiveScene;
 
     public static Camera Camera => camera;
-
     public static Logger Logger { get; } = new("Main");
-
-    private static Scene Scene => SceneManager.ActiveScene;
+    public static List<Entity> Players { get; } = [];
 
     public Main()
     {
@@ -27,6 +27,8 @@ public class Main : Game
 
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
+
+        IsFixedTimeStep = true;
     }
 
     protected override void Initialize()
@@ -97,6 +99,24 @@ public class Main : Game
         Scene?.Update();
         Scene?.PostUpdate();
 
+        if(Players.Count > 0)
+        {
+            Vector2 pos = Vector2.Zero;
+            foreach(var player in Players)
+            {
+                var component = player.GetComponent<SmashPassers.Components.PlayerBase>();
+                pos += component.Center.ToVector2() + new Vector2(
+                    component.velocity.X * 24,
+                    component.velocity.Y * component.velocity.Y / 4 * Math.Sign(component.velocity.Y)
+                );
+            }
+            pos /= Players.Count;
+
+            Camera.Position += (pos + new Vector2(-Renderer.ScreenSize.X / 2f, -Renderer.ScreenSize.Y / 2f) - Camera.Position) / 4f;
+        }
+        else
+            Camera.Position += (Vector2.Zero + new Vector2(-Renderer.ScreenSize.X / 2f, -Renderer.ScreenSize.Y / 2f) - Camera.Position) / 4f;
+
         camera.Update();
 
         JellyBackend.PostUpdate();
@@ -117,10 +137,18 @@ public class Main : Game
         var rect = GraphicsDevice.ScissorRectangle;
         // GraphicsDevice.ScissorRectangle = new(0, 0, Scene?.Width ?? Renderer.ScreenSize.X, Scene?.Height ?? Renderer.ScreenSize.Y);
 
-        Renderer.BeginDraw(SamplerState.PointClamp);
+        Renderer.BeginDraw(SamplerState.PointClamp, camera.Transform);
 
-        Scene?.Draw();
-        Scene?.PostDraw();
+        if(Scene is not null)
+        {
+            foreach(var tile in Scene.CollisionSystem.Collisions)
+            {
+                Renderer.SpriteBatch.Draw(Renderer.PixelTexture, tile, Color.Black);
+            }
+
+            Scene.Draw();
+            Scene.PostDraw();
+        }
 
         Renderer.EndDraw();
 
