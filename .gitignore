@@ -8,9 +8,6 @@ TestResults
 # NoPipeline means no pipeline
 *.mgcb
 
-# Ignore library files
-*.dll
-
 # Ignore ImGui runtime info
 Beebo/imgui.ini
 
