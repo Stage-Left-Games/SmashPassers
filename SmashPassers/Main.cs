@@ -31,7 +31,17 @@ public class Main : Game
 
     protected override void Initialize()
     {
+        Renderer.ScreenSize = new Point(1920, 1080).Clamp(
+            Point.Zero,
+            new(GraphicsDevice.PresentationParameters.BackBufferWidth, GraphicsDevice.PresentationParameters.BackBufferHeight)
+        );
+        Renderer.PixelScale = Renderer.ScreenSize.X / GraphicsDevice.PresentationParameters.BackBufferWidth;
+
+        _graphics.PreferredBackBufferWidth = Renderer.ScreenSize.X * Renderer.PixelScale;
+        _graphics.PreferredBackBufferHeight = Renderer.ScreenSize.Y * Renderer.PixelScale;
+
         Renderer.Initialize(_graphics, GraphicsDevice, Window);
+
         camera = new Camera();
 
         ContentLoader.Init(Content);
@@ -51,6 +61,13 @@ public class Main : Game
         Renderer.LoadContent(Content);
 
         // TODO: use this.Content to load your game content here
+    }
+
+    protected override void BeginRun()
+    {
+        SceneLoader.Load(SceneID.Title);
+
+        base.BeginRun();
     }
 
     protected override void Update(GameTime gameTime)
@@ -87,18 +104,18 @@ public class Main : Game
         base.Update(gameTime);
     }
 
-    private void PreDraw(GameTime gameTime)
+    protected override bool BeginDraw()
     {
         Scene?.PreDraw();
+
+        return base.BeginDraw();
     }
 
     protected override void Draw(GameTime gameTime)
     {
-        PreDraw(gameTime);
-
         // Set culling region
         var rect = GraphicsDevice.ScissorRectangle;
-        GraphicsDevice.ScissorRectangle = new(0, 0, Scene?.Width ?? Renderer.ScreenSize.X, Scene?.Height ?? Renderer.ScreenSize.Y);
+        // GraphicsDevice.ScissorRectangle = new(0, 0, Scene?.Width ?? Renderer.ScreenSize.X, Scene?.Height ?? Renderer.ScreenSize.Y);
 
         Renderer.BeginDraw(SamplerState.PointClamp);
 
