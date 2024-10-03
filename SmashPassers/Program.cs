@@ -1,2 +1,2 @@
-﻿using var game = new SmashPassers.Game1();
+﻿using var game = new SmashPassers.Main();
 game.Run();
