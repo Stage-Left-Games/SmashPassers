@@ -30,8 +30,8 @@ public class PlayerBase : Actor
 
     private bool useGravity = true;
     private bool jumpCancelled;
-    private bool running;
-    private int inputDir;
+    protected bool running;
+    protected int inputDir;
     private bool wasOnGround;
     private bool onJumpthrough;
 
@@ -101,7 +101,7 @@ public class PlayerBase : Actor
         base.SceneEnd(scene);
     }
 
-    void AddTexture(string texture, int frameCount = 1)
+    protected void AddTexture(string texture, int frameCount = 1)
     {
         Textures.Add(texture);
         FrameCounts.Add(frameCount);
@@ -119,6 +119,11 @@ public class PlayerBase : Actor
         if(!wasOnGround && OnGround)
         {
             jumpCancelled = false;
+        }
+
+        if(OnGround && !wasOnGround)
+        {
+            // onland
         }
 
         velocity.Y = Util.Approach(velocity.Y, TerminalVelocity, Gravity * Time.DeltaTime);
@@ -180,6 +185,11 @@ public class PlayerBase : Actor
                 if(onJumpthrough) OnGround = true;
                 else OnGround = CheckColliding(BottomEdge.Shift(0, 1));
             }
+        }
+
+        if(running)
+        {
+            Frame += Math.Abs(velocity.X) / FrameCounts[TextureIndex] / 2.5f;
         }
 
         FxTrail = Math.Abs(velocity.X) > 1f * moveSpeed;
@@ -263,6 +273,14 @@ public class PlayerBase : Actor
         }
 
         Sprite.SpriteEffects = SpriteEffects;
+    }
+
+    public override void PreDraw()
+    {
+        var count = FrameCounts[TextureIndex];
+        while(Frame > count)
+            Frame -= count;
+        Sprite.TexturePath = $"{Textures[TextureIndex]}-{(int)Frame % count}";
     }
 
     private void RecalculateStats()

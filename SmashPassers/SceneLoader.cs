@@ -43,7 +43,7 @@ public static class SceneLoader
                                     TexturePath = "Images/Characters/miki/miki_0-0",
                                     Pivot = new(240, 332),
                                 },
-                                new Components.PlayerBase {
+                                new Components.MikiPlayer {
                                     HitboxOffset = new(-128/2, -304),
                                     Width = 128,
                                     Height = 304
