@@ -39,10 +39,10 @@ public static class SceneLoader
                             Position = new(220, 400),
                             Depth = 50,
                             Components = {
-                                new SpriteComponent {
-                                    TexturePath = "Images/Characters/miki/miki_0-0",
-                                    Pivot = new(240, 332),
-                                },
+                                // new SpriteComponent {
+                                //     TexturePath = "Images/Characters/miki/miki_0-0",
+                                //     Pivot = new(240, 332),
+                                // },
                                 new Components.MikiPlayer {
                                     HitboxOffset = new(-128/2, -304),
                                     Width = 128,

@@ -10,20 +10,34 @@ public class MikiPlayer : PlayerBase
 
     public override void OnCreated()
     {
-        AddTexture("Images/Characters/miki/miki_0", 4);
-        AddTexture("Images/Characters/miki/miki_0", 1);
+        base.OnCreated();
+
+        AddAnimation(new(sprite, "idle") {
+            TexturePath = "Images/Characters/miki/miki_0",
+            Frames = {
+                new(),
+                new(),
+                new(),
+                new(),
+            },
+            Pivot = new(240, 332)
+        });
+        AddAnimation(new(sprite, "run") {
+            TexturePath = "Images/Characters/miki/miki_0",
+            Frames = {new()},
+            Pivot = new(240, 332)
+        });
+        AddAnimation(new(sprite, "skid") {
+            TexturePath = "Images/Characters/miki/miki_2",
+            Frames = {new()},
+            Pivot = new(240, 332)
+        });
+
+        AnimationId = "idle";
     }
 
     public override void Update()
     {
         base.Update();
-
-        if(running)
-            TextureIndex = (int)TextureIndexes.Run;
-        else if(inputDir == 0 && velocity.X == 0)
-        {
-            TextureIndex = (int)TextureIndexes.Idle;
-            Frame += 0.08f;
-        }
     }
 }

@@ -6,6 +6,7 @@ using Jelly.Graphics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using SmashPassers.Graphics;
 
 namespace SmashPassers.Components;
 
@@ -16,7 +17,7 @@ public class PlayerBase : Actor
 
     public Point HitboxOffset { get => bboxOffset; set => bboxOffset = value; }
 
-    private readonly float baseMoveSpeed = 5;
+    private readonly float baseMoveSpeed = 10;
     private readonly float baseJumpSpeed = -12;
     private readonly float baseGroundAcceleration = 5;
     private readonly float baseGroundFriction = 12;
@@ -39,12 +40,9 @@ public class PlayerBase : Actor
     private readonly List<AfterImage> afterImages = [];
     protected bool FxTrail { get; set; }
 
-    protected List<string> Textures { get; } = [];
-    protected List<int> FrameCounts { get; } = [];
-    protected float Frame { get; set; }
-    protected int TextureIndex { get; set; }
+    protected string AnimationId { get; set; }
 
-    private SpriteComponent Sprite => Entity.GetComponent<SpriteComponent>();
+    protected AnimatedSprite sprite = new();
 
     public PlayerInputMapping InputMapping { get; } = new() {
         
@@ -53,23 +51,23 @@ public class PlayerBase : Actor
     public bool UseGamePad { get; set; }
     public PlayerIndex GamePadIndex { get; set; }
 
-    class AfterImage : Component
+    class AfterImage
     {
         public float Alpha = 1;
         public string TexturePath;
         public int Frame;
-        public Point Position;
+        public Vector2 Position;
         public SpriteEffects SpriteEffects;
         public Vector2 Pivot = Vector2.Zero;
         public Vector2 Scale = Vector2.One;
         public Color Color = Color.White;
         public float Rotation;
 
-        public override void Draw()
+        public void Draw()
         {
             Renderer.SpriteBatch.Draw(
                 ContentLoader.LoadContent<Texture2D>(TexturePath),
-                Position.ToVector2(),
+                Position,
                 null,
                 Color * Alpha,
                 Rotation,
@@ -79,13 +77,6 @@ public class PlayerBase : Actor
                 0
             );
         }
-    }
-
-    public override void OnCreated()
-    {
-        AddTexture(Sprite.TexturePath);
-
-        base.OnCreated();
     }
 
     public override void EntityAwake()
@@ -101,10 +92,9 @@ public class PlayerBase : Actor
         base.SceneEnd(scene);
     }
 
-    protected void AddTexture(string texture, int frameCount = 1)
+    protected void AddAnimation(AnimatedSprite.Animation animation)
     {
-        Textures.Add(texture);
-        FrameCounts.Add(frameCount);
+        sprite.Animations[animation.Id] = animation;
     }
 
     public override void Update()
@@ -145,10 +135,14 @@ public class PlayerBase : Actor
             if(OnGround)
             {
                 running = true;
+                AnimationId = "run";
             }
 
             if(inputDir * velocity.X < 0)
             {
+                if(OnGround && inputDir * velocity.X < -2)
+                    AnimationId = "skid";
+
                 velocity.X = Util.Approach(velocity.X, 0, fric * Time.DeltaTime);
             }
             if(inputDir * velocity.X < moveSpeed)
@@ -165,6 +159,14 @@ public class PlayerBase : Actor
         {
             running = false;
             velocity.X = Util.Approach(velocity.X, 0, fric * 2 * Time.DeltaTime);
+
+            if(OnGround)
+            {
+                if(Math.Abs(velocity.X) < 1)
+                {
+                    AnimationId = "idle";
+                }
+            }
         }
 
         if(!OnGround)
@@ -185,11 +187,6 @@ public class PlayerBase : Actor
                 if(onJumpthrough) OnGround = true;
                 else OnGround = CheckColliding(BottomEdge.Shift(0, 1));
             }
-        }
-
-        if(running)
-        {
-            Frame += Math.Abs(velocity.X) / FrameCounts[TextureIndex] / 2.5f;
         }
 
         FxTrail = Math.Abs(velocity.X) > 1f * moveSpeed;
@@ -239,19 +236,16 @@ public class PlayerBase : Actor
             if(fxTrailCounter >= 3)
             {
                 fxTrailCounter = 0;
-                var afterImage = new AfterImage {
-                    TexturePath = Textures[TextureIndex],
-                    Position = Entity.Position,
-                    SpriteEffects = SpriteEffects,
-                    Scale = Sprite.Scale,
-                    Color = Sprite.Color,
-                    Rotation = Sprite.Rotation,
-                    Pivot = Sprite.Pivot,
-                    Alpha = 0.75f
-                };
-                afterImages.Add(afterImage);
-                Entity.AddComponent(afterImage);
-                Entity.AddComponent(Sprite);
+                afterImages.Add(new AfterImage {
+                    TexturePath = sprite.CurrentAnimation.ActiveTexturePath,
+                    Position = Entity.Position.ToVector2() + sprite.CurrentAnimation.ActiveOffset,
+                    SpriteEffects = sprite.CurrentAnimation.SpriteEffects,
+                    Scale = sprite.CurrentAnimation.ActiveScale,
+                    Color = sprite.CurrentAnimation.ActiveColor,
+                    Rotation = sprite.CurrentAnimation.ActiveRotation,
+                    Pivot = sprite.CurrentAnimation.ActivePivot,
+                    Alpha = 0.75f * sprite.CurrentAnimation.ActiveAlpha
+                });
             }
         }
         else
@@ -267,20 +261,39 @@ public class PlayerBase : Actor
             if(image.Alpha == 0)
             {
                 afterImages.RemoveAt(i);
-                Entity.RemoveComponent(image);
                 i--;
             }
         }
-
-        Sprite.SpriteEffects = SpriteEffects;
     }
 
     public override void PreDraw()
     {
-        var count = FrameCounts[TextureIndex];
-        while(Frame > count)
-            Frame -= count;
-        Sprite.TexturePath = $"{Textures[TextureIndex]}-{(int)Frame % count}";
+        sprite.SetAnimation(AnimationId);
+        if(sprite.CurrentAnimation is not null)
+        {
+            sprite.CurrentAnimation.SpriteEffects = SpriteEffects;
+
+            if(inputDir == 0 && velocity.X == 0)
+            {
+                sprite.CurrentAnimation.PlaybackSpeed = 0.2f;
+            }
+            else if(running)
+            {
+                sprite.CurrentAnimation.PlaybackSpeed = Math.Abs(velocity.X) / 2.5f;
+            }
+        }
+
+        sprite.Update();
+    }
+
+    public override void Draw()
+    {
+        foreach(var img in afterImages)
+        {
+            img.Draw();
+        }
+
+        sprite.Draw(Entity.Position.ToVector2());
     }
 
     private void RecalculateStats()
