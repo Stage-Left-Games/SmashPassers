@@ -37,7 +37,7 @@ public class Main : Game
             Point.Zero,
             new(GraphicsDevice.PresentationParameters.BackBufferWidth, GraphicsDevice.PresentationParameters.BackBufferHeight)
         );
-        Renderer.PixelScale = Renderer.ScreenSize.X / GraphicsDevice.PresentationParameters.BackBufferWidth;
+        Renderer.PixelScale = GraphicsDevice.PresentationParameters.BackBufferWidth / Renderer.ScreenSize.X;
 
         _graphics.PreferredBackBufferWidth = Renderer.ScreenSize.X * Renderer.PixelScale;
         _graphics.PreferredBackBufferHeight = Renderer.ScreenSize.Y * Renderer.PixelScale;
