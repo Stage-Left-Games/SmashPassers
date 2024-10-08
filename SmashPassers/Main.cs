@@ -35,9 +35,9 @@ public class Main : Game
     {
         Renderer.ScreenSize = new Point(1920, 1080).Clamp(
             Point.Zero,
-            new(GraphicsDevice.PresentationParameters.BackBufferWidth, GraphicsDevice.PresentationParameters.BackBufferHeight)
+            new(GraphicsDevice.Adapter.CurrentDisplayMode.Width, GraphicsDevice.Adapter.CurrentDisplayMode.Height)
         );
-        Renderer.PixelScale = GraphicsDevice.PresentationParameters.BackBufferWidth / Renderer.ScreenSize.X;
+        Renderer.PixelScale = GraphicsDevice.Adapter.CurrentDisplayMode.Width / Renderer.ScreenSize.X;
 
         _graphics.PreferredBackBufferWidth = Renderer.ScreenSize.X * Renderer.PixelScale;
         _graphics.PreferredBackBufferHeight = Renderer.ScreenSize.Y * Renderer.PixelScale;
@@ -112,10 +112,10 @@ public class Main : Game
             }
             pos /= Players.Count;
 
-            Camera.Position += (pos + new Vector2(-Renderer.ScreenSize.X / 2f, -Renderer.ScreenSize.Y / 2f) - Camera.Position) / 4f;
+            Camera.Position += (pos + new Vector2(-Renderer.ScreenSize.X / 2f, -Renderer.ScreenSize.Y / 2f) - Camera.Position) / 8f;
         }
         else
-            Camera.Position += (Vector2.Zero + new Vector2(-Renderer.ScreenSize.X / 2f, -Renderer.ScreenSize.Y / 2f) - Camera.Position) / 4f;
+            Camera.Position += (Vector2.Zero + new Vector2(-Renderer.ScreenSize.X / 2f, -Renderer.ScreenSize.Y / 2f) - Camera.Position) / 8f;
 
         camera.Update();
 

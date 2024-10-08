@@ -4,10 +4,17 @@ using Jelly;
 using Jelly.Components;
 using Jelly.Graphics;
 
+using LDtk;
+using LDtk.Renderer;
+
 namespace SmashPassers;
 
 public static class SceneLoader
 {
+    static LDtkFile lDtkFile;
+    static LDtkWorld lDtkWorld;
+    static ExampleRenderer lDtkRenderer;
+
     public static void Load(SceneID sceneID)
     {
         Scene scene;
@@ -39,10 +46,6 @@ public static class SceneLoader
                             Position = new(220, 400),
                             Depth = 50,
                             Components = {
-                                // new SpriteComponent {
-                                //     TexturePath = "Images/Characters/miki/miki_0-0",
-                                //     Pivot = new(240, 332),
-                                // },
                                 new Components.MikiPlayer {
                                     HitboxOffset = new(-128/2, -304),
                                     Width = 128,
