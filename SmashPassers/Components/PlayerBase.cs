@@ -17,28 +17,56 @@ public class PlayerBase : Actor
 
     public Point HitboxOffset { get => bboxOffset; set => bboxOffset = value; }
 
-    private readonly float baseMoveSpeed = 10;
-    private readonly float baseJumpSpeed = -12;
-    private readonly float baseGroundAcceleration = 5;
-    private readonly float baseGroundFriction = 12;
-    private readonly float baseAirAcceleration = 2;
-    private readonly float baseAirFriction = 1;
+    private string _state = "normal"; // please do NOT touch this thx
+    private bool _stateJustChanged;
 
+    public int StateTimer { get; protected set; }
+
+    public string State {
+        get => _state;
+        protected set {
+            if(_state != value)
+            {
+                _stateJustChanged = true;
+                StateTimer = 0;
+
+                OnStateExit(_state);
+
+                _state = value;
+
+                OnStateEnter(_state);
+            }
+        }
+    }
+
+    // baseline
+    protected float baseMoveSpeed = 10;
+    protected float baseJumpSpeed = -12;
+    protected float baseGroundAcceleration = 5;
+    protected float baseGroundFriction = 12;
+    protected float baseAirAcceleration = 2;
+    protected float baseAirFriction = 1;
+
+    // current
     private float moveSpeed;
     private float jumpSpeed;
     private float accel;
     private float fric;
 
-    private bool useGravity = true;
     private bool jumpCancelled;
-    protected bool running;
-    protected int inputDir;
     private bool wasOnGround;
     private bool onJumpthrough;
 
+    protected bool IsRunning { get; private set; }
+    protected int InputDir { get; private set; }
+
+    /// <summary>
+    /// Set to true to enable after image effect
+    /// </summary>
+    protected bool FxTrail { get; set; }
+
     private int fxTrailCounter;
     private readonly List<AfterImage> afterImages = [];
-    protected bool FxTrail { get; set; }
 
     protected string AnimationId { get; set; }
 
@@ -79,6 +107,13 @@ public class PlayerBase : Actor
         }
     }
 
+    public override void OnCreated()
+    {
+        base.OnCreated();
+
+        AnimationId = "idle";
+    }
+
     public override void EntityAwake()
     {
         Main.Players.Add(Entity);
@@ -94,12 +129,13 @@ public class PlayerBase : Actor
 
     protected void AddAnimation(AnimatedSprite.Animation animation)
     {
+        animation.Sprite = sprite;
         sprite.Animations[animation.Id] = animation;
     }
 
     public override void Update()
     {
-        inputDir = InputMapping.Right.IsDown.ToInt32() - InputMapping.Left.IsDown.ToInt32();
+        InputDir = InputMapping.Right.IsDown.ToInt32() - InputMapping.Left.IsDown.ToInt32();
 
         wasOnGround = OnGround;
         onJumpthrough = CheckCollidingJumpthrough(BottomEdge.Shift(0, 1));
@@ -120,78 +156,17 @@ public class PlayerBase : Actor
 
         RecalculateStats();
 
-        useGravity = true;
-
-        if(inputDir != 0)
+        if(!_stateJustChanged)
         {
-            Facing = inputDir;
-
-            if(InputMapping.PrimaryFire.Pressed)
-            {
-                velocity.X = 15 * inputDir;
-                velocity.Y = MathHelper.Min(-2, velocity.Y);
-            }
-
-            if(OnGround)
-            {
-                running = true;
-                AnimationId = "run";
-            }
-
-            if(inputDir * velocity.X < 0)
-            {
-                if(OnGround && inputDir * velocity.X < -2)
-                    AnimationId = "skid";
-
-                velocity.X = Util.Approach(velocity.X, 0, fric * Time.DeltaTime);
-            }
-            if(inputDir * velocity.X < moveSpeed)
-            {
-                velocity.X = Util.Approach(velocity.X, inputDir * moveSpeed, accel * Time.DeltaTime);
-            }
-
-            if(inputDir * velocity.X > moveSpeed && OnGround)
-            {
-                velocity.X = Util.Approach(velocity.X, inputDir * moveSpeed, fric * 2 * Time.DeltaTime);
-            }
+            CollidesWithJumpthroughs = true;
+            CollidesWithSolids = true;
         }
         else
         {
-            running = false;
-            velocity.X = Util.Approach(velocity.X, 0, fric * 2 * Time.DeltaTime);
-
-            if(OnGround)
-            {
-                if(Math.Abs(velocity.X) < 1)
-                {
-                    AnimationId = "idle";
-                }
-            }
+            _stateJustChanged = false;
         }
 
-        if(!OnGround)
-        {
-            if(InputMapping.Down.Released && velocity.Y < 0 && !jumpCancelled)
-            {
-                jumpCancelled = true;
-                velocity.Y /= 2;
-            }
-        }
-        else
-        {
-            if(onJumpthrough && InputMapping.Down.IsDown && !CheckColliding(BottomEdge.Shift(new(0, 2)), true))
-            {
-                Entity.Y += 2;
-
-                onJumpthrough = CheckCollidingJumpthrough(BottomEdge.Shift(0, 1));
-                if(onJumpthrough) OnGround = true;
-                else OnGround = CheckColliding(BottomEdge.Shift(0, 1));
-            }
-        }
-
-        FxTrail = Math.Abs(velocity.X) > 1f * moveSpeed;
-
-        // ...
+        StateUpdate();
 
         if(OnGround && InputMapping.Jump.Pressed)
         {
@@ -266,6 +241,120 @@ public class PlayerBase : Actor
         }
     }
 
+    protected virtual void OnStateEnter(string state)
+    {
+        switch(state)
+        {
+            case "none":
+                break;
+            case "normal":
+                break;
+            case "dead":
+                break;
+            default:
+                break;
+        }
+    }
+
+    protected virtual void StateUpdate()
+    {
+        switch (_state)
+        {
+            case "normal":
+            {
+                if(InputDir != 0)
+                {
+                    Facing = InputDir;
+
+                    if(InputMapping.PrimaryFire.Pressed)
+                    {
+                        velocity.X = 15 * InputDir;
+                        velocity.Y = MathHelper.Min(-2, velocity.Y);
+                    }
+
+                    if(OnGround)
+                    {
+                        IsRunning = true;
+                        AnimationId = "run";
+                    }
+
+                    if(InputDir * velocity.X < 0)
+                    {
+                        if(OnGround && InputDir * velocity.X < -2)
+                            AnimationId = "skid";
+
+                        velocity.X = Util.Approach(velocity.X, 0, fric * Time.DeltaTime);
+                    }
+                    if(InputDir * velocity.X < moveSpeed)
+                    {
+                        velocity.X = Util.Approach(velocity.X, InputDir * moveSpeed, accel * Time.DeltaTime);
+                    }
+
+                    if(InputDir * velocity.X > moveSpeed && OnGround)
+                    {
+                        velocity.X = Util.Approach(velocity.X, InputDir * moveSpeed, fric * 2 * Time.DeltaTime);
+                    }
+                }
+                else
+                {
+                    IsRunning = false;
+                    velocity.X = Util.Approach(velocity.X, 0, fric * 2 * Time.DeltaTime);
+
+                    if(OnGround)
+                    {
+                        if(Math.Abs(velocity.X) < 1)
+                        {
+                            AnimationId = "idle";
+                        }
+                    }
+                }
+
+                if(!OnGround)
+                {
+                    if(InputMapping.Jump.Released && velocity.Y < 0 && !jumpCancelled)
+                    {
+                        jumpCancelled = true;
+                        velocity.Y /= 2;
+                    }
+                }
+                else
+                {
+                    if(onJumpthrough && InputMapping.Down.IsDown && !CheckColliding(BottomEdge.Shift(new(0, 2)), true))
+                    {
+                        Entity.Y += 2;
+
+                        onJumpthrough = CheckCollidingJumpthrough(BottomEdge.Shift(0, 1));
+                        if(onJumpthrough) OnGround = true;
+                        else OnGround = CheckColliding(BottomEdge.Shift(0, 1));
+                    }
+                }
+
+                FxTrail = Math.Abs(velocity.X) > 1f * moveSpeed;
+
+                // ...
+
+                break;
+            }
+            case "none": default:
+                break;
+        }
+    }
+
+    protected virtual void OnStateExit(string state)
+    {
+        switch(state)
+        {
+            case "none":
+                break;
+            case "normal":
+                break;
+            case "dead":
+                break;
+            default:
+                break;
+        }
+    }
+
     public override void PreDraw()
     {
         sprite.SetAnimation(AnimationId);
@@ -273,11 +362,11 @@ public class PlayerBase : Actor
         {
             sprite.CurrentAnimation.SpriteEffects = SpriteEffects;
 
-            if(inputDir == 0 && velocity.X == 0)
+            if(InputDir == 0 && velocity.X == 0)
             {
                 sprite.CurrentAnimation.PlaybackSpeed = 0.2f;
             }
-            else if(running)
+            else if(IsRunning)
             {
                 sprite.CurrentAnimation.PlaybackSpeed = Math.Abs(velocity.X) / 2.5f;
             }

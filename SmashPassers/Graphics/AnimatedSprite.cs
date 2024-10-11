@@ -63,13 +63,17 @@ public class AnimatedSprite
         CurrentAnimation?.Play();
     }
 
-    public class Animation(AnimatedSprite sprite, string id)
+    public class Animation
     {
         private int frameIndex;
         private float frameDelay;
         private bool hasPlayed;
+        private readonly string id;
 
         public string Id => id;
+
+        [JsonIgnore]
+        public AnimatedSprite Sprite { get; set; }
 
         [JsonIgnore]
         public bool IsPlaying { get; private set; }
@@ -104,7 +108,7 @@ public class AnimatedSprite
                         frameIndex = i;
                         frameDelay = CurrentFrame.DurationInSeconds - (value - duration) * CurrentFrame.DurationInSeconds;
 
-                        sprite.FrameChanged?.Invoke(this, frameIndex);
+                        Sprite.FrameChanged?.Invoke(this, frameIndex);
                         break;
                     }
 
@@ -134,6 +138,17 @@ public class AnimatedSprite
         public float ActiveRotation => CurrentFrame.Rotation ?? Rotation;
         public Vector2 ActivePivot => CurrentFrame.Pivot ?? Pivot;
 
+        public Animation(AnimatedSprite sprite, string id)
+        {
+            this.id = id;
+            Sprite = sprite;
+        }
+
+        public Animation(string id)
+        {
+            this.id = id;
+        }
+
         public void Play()
         {
             IsPlaying = true;
@@ -158,9 +173,10 @@ public class AnimatedSprite
 
             if(Frames.Count == 0)
             {
-                Stop();
-                sprite.Finished?.Invoke(this);
-                return;
+                // Stop();
+                // Sprite.Finished?.Invoke(this);
+                // return;
+                Frames.Add(new());
             }
 
             frameDelay = MathHelper.Max(0, frameDelay - (useUnscaledTime ? Time.UnscaledDeltaTime : Time.DeltaTime) * PlaybackSpeed);
@@ -176,16 +192,16 @@ public class AnimatedSprite
                     if(!Loop)
                     {
                         Stop();
-                        sprite.Finished?.Invoke(this);
+                        Sprite.Finished?.Invoke(this);
                     }
                     else
                     {
-                        sprite.Looped?.Invoke(this);
+                        Sprite.Looped?.Invoke(this);
                     }
                 }
 
                 if(frameIndex != ind)
-                    sprite.FrameChanged?.Invoke(this, frameIndex);
+                    Sprite.FrameChanged?.Invoke(this, frameIndex);
 
                 frameDelay = Frames[frameIndex].DurationInSeconds;
             }

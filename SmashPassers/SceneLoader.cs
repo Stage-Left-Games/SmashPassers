@@ -56,8 +56,13 @@ public static class SceneLoader
                     },
                 };
 
+                scene.CollisionSystem.SetTile(1, Point.Zero);
+
                 for(int i = 0; i < scene.CollisionSystem.Width; i++)
+                {
                     scene.CollisionSystem.SetTile(1, new(i, scene.CollisionSystem.Height - 1));
+                }
+
                 break;
             }
             default:

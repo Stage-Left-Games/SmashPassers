@@ -2,42 +2,30 @@ namespace SmashPassers.Components;
 
 public class MikiPlayer : PlayerBase
 {
-    private enum TextureIndexes
-    {
-        Idle,
-        Run
-    }
-
     public override void OnCreated()
     {
         base.OnCreated();
 
-        AddAnimation(new(sprite, "idle") {
+        AddAnimation(new("idle") {
             TexturePath = "Images/Characters/miki/miki_0",
-            Frames = {
-                new(),
-                new(),
-                new(),
-                new(),
-            },
+            Frames = {new(), new(), new(), new()}, // 4 default frames
             Pivot = new(240, 332)
         });
-        AddAnimation(new(sprite, "run") {
+        AddAnimation(new("run") {
             TexturePath = "Images/Characters/miki/miki_0",
-            Frames = {new()},
             Pivot = new(240, 332)
         });
-        AddAnimation(new(sprite, "skid") {
+        AddAnimation(new("skid") {
             TexturePath = "Images/Characters/miki/miki_2",
-            Frames = {new()},
             Pivot = new(240, 332)
         });
-
-        AnimationId = "idle";
     }
 
-    public override void Update()
+    protected override void StateUpdate()
     {
-        base.Update();
+        switch(State)
+        {
+            default: base.StateUpdate(); break;
+        }
     }
 }
