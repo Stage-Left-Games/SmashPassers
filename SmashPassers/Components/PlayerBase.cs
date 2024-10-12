@@ -83,7 +83,6 @@ public class PlayerBase : Actor
     {
         public float Alpha = 1;
         public string TexturePath;
-        public int Frame;
         public Vector2 Position;
         public SpriteEffects SpriteEffects;
         public Vector2 Pivot = Vector2.Zero;

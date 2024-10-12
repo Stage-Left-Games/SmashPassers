@@ -7,6 +7,7 @@ using Microsoft.Xna.Framework.Input;
 using Jelly;
 using Jelly.Graphics;
 using System.Collections.Generic;
+using SmashPassers.GameContent;
 
 namespace SmashPassers;
 
@@ -47,6 +48,8 @@ public class Main : Game
         camera = new Camera();
 
         ContentLoader.Init(Content);
+
+        RegistryManager.Initialize();
 
         // Registry
         JellyBackend.Initialize(new ContentLoader());
