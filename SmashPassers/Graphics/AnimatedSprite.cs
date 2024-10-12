@@ -1,3 +1,5 @@
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
@@ -6,8 +8,6 @@ using Microsoft.Xna.Framework.Graphics;
 
 using Jelly;
 using Jelly.Graphics;
-using System;
-using System.Collections;
 
 namespace SmashPassers.Graphics;
 
@@ -126,7 +126,7 @@ public class AnimatedSprite
         public Color Color { get; set; } = Color.White;
         public float Alpha { get; set; } = 1f;
         public float Rotation { get; set; } = 0f;
-        public Vector2 Pivot { get; set; } = Vector2.Zero;
+        public Vector2? Pivot { get; set; }
 
         // use these to get per-frame (with fallback) values
         public Vector2 ActiveOffset => CurrentFrame.Offset ?? Vector2.Zero;
@@ -136,7 +136,7 @@ public class AnimatedSprite
         public Color ActiveColor => CurrentFrame.Color ?? Color;
         public float ActiveAlpha => CurrentFrame.Alpha ?? Alpha;
         public float ActiveRotation => CurrentFrame.Rotation ?? Rotation;
-        public Vector2 ActivePivot => CurrentFrame.Pivot ?? Pivot;
+        public Vector2 ActivePivot => CurrentFrame.Pivot ?? Pivot ?? Vector2.Zero;
 
         public Animation(AnimatedSprite sprite, string id)
         {
@@ -211,7 +211,7 @@ public class AnimatedSprite
         {
             if(Frames.Count == 0)
             {
-                Renderer.SpriteBatch.Draw(ContentLoader.LoadContent<Texture2D>(TexturePath + "-0"), position, SourceRectangle, Color * Alpha, Rotation, Pivot, Scale, SpriteEffects, 0f);
+                Renderer.SpriteBatch.Draw(ContentLoader.LoadContent<Texture2D>(TexturePath + "-0"), position, SourceRectangle, Color * Alpha, Rotation, Pivot ?? Vector2.Zero, Scale, SpriteEffects, 0f);
                 return;
             }
 

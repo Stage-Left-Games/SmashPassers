@@ -1,7 +1,10 @@
+using System;
+
 using Jelly;
 
 namespace SmashPassers;
 
+[Flags]
 public enum EntityTags : uint
 {
     None = 0,

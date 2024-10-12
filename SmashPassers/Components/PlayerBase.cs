@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
-using Jelly;
-using Jelly.Components;
-using Jelly.Graphics;
+
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+
+using Jelly;
+using Jelly.Components;
+using Jelly.Graphics;
+
 using SmashPassers.Graphics;
 
 namespace SmashPassers.Components;
@@ -14,6 +17,10 @@ public class PlayerBase : Actor
 {
     public const float Gravity = 20;
     public const float TerminalVelocity = 30;
+
+    private static readonly Vector2 _defaultPivot = new(240, 332);
+
+    public static Vector2 DefaultPivot => _defaultPivot;
 
     public Point HitboxOffset { get => bboxOffset; set => bboxOffset = value; }
 
@@ -72,9 +79,7 @@ public class PlayerBase : Actor
 
     protected AnimatedSprite sprite = new();
 
-    public PlayerInputMapping InputMapping { get; } = new() {
-        
-    };
+    public PlayerInputMapping InputMapping { get; } = new();
 
     public bool UseGamePad { get; set; }
     public PlayerIndex GamePadIndex { get; set; }
@@ -111,6 +116,8 @@ public class PlayerBase : Actor
         base.OnCreated();
 
         AnimationId = "idle";
+        Entity.Depth = 50;
+        Entity.Tag.Add(EntityTags.Player);
     }
 
     public override void EntityAwake()
@@ -129,7 +136,17 @@ public class PlayerBase : Actor
     protected void AddAnimation(AnimatedSprite.Animation animation)
     {
         animation.Sprite = sprite;
+        animation.Pivot ??= DefaultPivot;
+
         sprite.Animations[animation.Id] = animation;
+    }
+
+    protected void SetHitbox(Rectangle mask, Point pivot)
+    {
+        bboxOffset = mask.Location;
+        Width = mask.Width;
+        Height = mask.Height;
+        Entity.Pivot = pivot;
     }
 
     public override void Update()
@@ -143,12 +160,19 @@ public class PlayerBase : Actor
 
         if(!wasOnGround && OnGround)
         {
-            jumpCancelled = false;
-        }
-
-        if(OnGround && !wasOnGround)
-        {
             // onland
+            if(!CheckColliding(BottomEdge.Shift(1, 1)))
+            {
+                Entity.X++;
+                Entity.Y++;
+            }
+            else if(!CheckColliding(BottomEdge.Shift(-1, 1)))
+            {
+                Entity.X--;
+                Entity.Y++;
+            }
+
+            jumpCancelled = false;
         }
 
         velocity.Y = Util.Approach(velocity.Y, TerminalVelocity, Gravity * Time.DeltaTime);
@@ -172,10 +196,43 @@ public class PlayerBase : Actor
             velocity.Y = jumpSpeed;
         }
 
-        MoveX(velocity.X, () => {
-            velocity.X = 0;
+        MoveX(velocity.X * (Time.DeltaTime * 60), () => {
+            if(State == "dead")
+            {
+                velocity.X = -velocity.X * 0.9f;
+            }
+            else for(int j = 0; j < Util.RoundToInt(MathHelper.Max(Time.DeltaTime, 1)); j++)
+            {
+                var nudgeDistance = OnGround ? -15 : -10;
+                if(InputDir != 0 && !CheckColliding(Hitbox.Shift(InputDir, nudgeDistance)))
+                {
+                    if(CheckColliding(Hitbox.Shift(InputDir, 0), true) && !CheckColliding(Hitbox.Shift(0, nudgeDistance), true))
+                    {
+                        MoveY(nudgeDistance, null);
+                        MoveX(InputDir * -nudgeDistance, null);
+                    }
+                }
+                else
+                {
+                    // if (Math.Abs(velocity.X) >= 1)
+                    // {
+                    //     _audio_play_sound(sn_player_land, 0, false);
+                    //     for (int i = 0; i < 3; i++)
+                    //     {
+                    //         with(instance_create_depth((x + (4 * sign(facing))), random_range((bbox_bottom - 12), (bbox_bottom - 2)), (depth - 1), fx_dust))
+                    //         {
+                    //             sprite_index = spr_fx_dust2;
+                    //             vy = (Math.Abs(other.velocity.Y) > 0.6) ? other.velocity.Y * 0.5 : vy;
+                    //             vz = 0;
+                    //         }
+                    //     }
+                    // }
+                    velocity.X = 0;
+                    break;
+                }
+            }
         });
-        MoveY(velocity.Y, () => {
+        MoveY(velocity.Y * (Time.DeltaTime * 60), () => {
             if(!(InputMapping.Down.IsDown && CheckCollidingJumpthrough(BottomEdge.Shift(new(0, 1)))))
                 velocity.Y = 0;
         });

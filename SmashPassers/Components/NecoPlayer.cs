@@ -2,9 +2,9 @@ using Microsoft.Xna.Framework;
 
 namespace SmashPassers.Components;
 
-public class MikiPlayer : PlayerBase
+public class NecoPlayer : PlayerBase
 {
-    private Rectangle MaskNormal = new(-128/2, -304, 128, 304);
+    private Rectangle MaskNormal = new(-32/2, -70, 32, 70);
     private Point PivotNormal = DefaultPivot.ToPoint();
 
     public override void OnCreated()
@@ -14,14 +14,13 @@ public class MikiPlayer : PlayerBase
         SetHitbox(MaskNormal, PivotNormal);
 
         AddAnimation(new("idle") {
-            TexturePath = "Images/Characters/miki/miki_0",
-            Frames = {new(), new(), new(), new()}, // 4 default frames
+            TexturePath = "Images/Characters/neco/neco_0",
         });
         AddAnimation(new("run") {
-            TexturePath = "Images/Characters/miki/miki_0",
+            TexturePath = "Images/Characters/neco/neco_0",
         });
         AddAnimation(new("skid") {
-            TexturePath = "Images/Characters/miki/miki_2",
+            TexturePath = "Images/Characters/neco/neco_0",
         });
     }
 

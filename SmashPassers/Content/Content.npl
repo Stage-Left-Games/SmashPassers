@@ -38,11 +38,28 @@
 				"Quality": "Best"
 			}
 		},
-		"levels": {
+
+		"levels-json": {
 			"path": "Levels/*.json",
 			"recursive": "True",
 			"action": "copy"
 		},
+		"levels-ldtk": {
+			"path": "Levels/*.ldtk",
+			"recursive": "True",
+			"action": "copy"
+		},
+		"levels-ldtkl": {
+			"path": "Levels/*.ldtkl",
+			"recursive": "True",
+			"action": "copy"
+		},
+		"levels-png": {
+			"path": "Levels/*.png",
+			"recursive": "True",
+			"action": "copy"
+		},
+
 		"effects": {
 			"path": "Effects/*.fx",
 			"recursive": "True",

@@ -14,7 +14,7 @@ public class JsonEntity
 {
     public string Name { get; set; } = null;
 
-    public IList<Component>? Components { get; set; }
+    public IList<Component>? Components { get; set; } = [];
 
     public Point Position { get; set; }
 

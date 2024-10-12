@@ -1,33 +1,47 @@
+using System.IO;
+
 using Microsoft.Xna.Framework;
 
 using Jelly;
-using Jelly.Components;
-using Jelly.Graphics;
 
-using LDtk;
-using LDtk.Renderer;
 using SmashPassers.GameContent;
 
 namespace SmashPassers;
 
 public static class SceneLoader
 {
-    static LDtkFile lDtkFile;
-    static LDtkWorld lDtkWorld;
-    static ExampleRenderer lDtkRenderer;
-
     public static void Load(SceneID sceneID)
     {
-        SceneManager.ChangeSceneImmediately(SceneRegistry.GetDefStatic(sceneID.ToString()).Build());
+        Load(SceneRegistry.GetDefStatic(sceneID.ToString()));
     }
 
-    public static void LoadLDtk(SceneID sceneID)
+    public static void LoadFile(string name)
     {
-        SceneManager.ChangeSceneImmediately(SceneRegistry.LoadFromFile(sceneID.ToString()).Build());
+        if(!Path.HasExtension(name))
+            name += ".json";
+
+        Load(SceneRegistry.LoadFromFile(Path.Combine("Content", "Levels", name)));
+    }
+
+    private static void Load(SceneDef scene)
+    {
+        scene.Entities.Add(new() {
+            Position = scene.RespawnPoint ?? Point.Zero,
+            Components = [
+                new Components.NecoPlayer {
+                    HitboxOffset = new(-32/2, -70),
+                    Width = 32,
+                    Height = 70,
+                },
+            ],
+        });
+
+        SceneManager.ChangeSceneImmediately(scene.Build());
     }
 }
 
 public enum SceneID
 {
-    Title
+    Title,
+    Track_Office,
 }

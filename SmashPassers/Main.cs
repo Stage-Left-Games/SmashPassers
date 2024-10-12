@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -6,7 +7,7 @@ using Microsoft.Xna.Framework.Input;
 
 using Jelly;
 using Jelly.Graphics;
-using System.Collections.Generic;
+
 using SmashPassers.GameContent;
 
 namespace SmashPassers;
@@ -30,6 +31,8 @@ public class Main : Game
         IsMouseVisible = true;
 
         IsFixedTimeStep = true;
+
+        CollisionSystem.TileSize = 30;
     }
 
     protected override void Initialize()
@@ -70,7 +73,7 @@ public class Main : Game
 
     protected override void BeginRun()
     {
-        SceneLoader.Load(SceneID.Title);
+        SceneLoader.Load(SceneID.Track_Office);
 
         base.BeginRun();
     }
@@ -118,7 +121,7 @@ public class Main : Game
             Camera.Position += (pos + new Vector2(-Renderer.ScreenSize.X / 2f, -Renderer.ScreenSize.Y / 2f) - Camera.Position) / 8f;
         }
         else
-            Camera.Position += (Vector2.Zero + new Vector2(-Renderer.ScreenSize.X / 2f, -Renderer.ScreenSize.Y / 2f) - Camera.Position) / 8f;
+            Camera.Position += (Vector2.Zero - Camera.Position) / 8f;
 
         camera.Update();
 
@@ -136,11 +139,17 @@ public class Main : Game
 
     protected override void Draw(GameTime gameTime)
     {
+        Renderer.BeginDraw(
+            samplerState: SamplerState.PointClamp,
+            transformMatrix: camera.Transform,
+            rasterizerState: new() {
+                ScissorTestEnable = true,
+            }
+        );
+
         // Set culling region
         var rect = GraphicsDevice.ScissorRectangle;
-        // GraphicsDevice.ScissorRectangle = new(0, 0, Scene?.Width ?? Renderer.ScreenSize.X, Scene?.Height ?? Renderer.ScreenSize.Y);
-
-        Renderer.BeginDraw(SamplerState.PointClamp, camera.Transform);
+        GraphicsDevice.ScissorRectangle = new(-(int)Camera.Position.X, -(int)Camera.Position.Y, Scene?.Width ?? Renderer.ScreenSize.X, Scene?.Height ?? Renderer.ScreenSize.Y);
 
         if(Scene is not null)
         {

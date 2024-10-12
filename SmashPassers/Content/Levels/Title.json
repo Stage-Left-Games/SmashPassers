@@ -1,0 +1,17 @@
+{
+  "name": "Title",
+  "entities": [
+    {
+      "position": [220, 400],
+      "components": [
+        {
+          "$type": "NecoPlayer"
+        }
+      ],
+      "enabled": true,
+      "visible": true,
+      "tag": 1,
+      "depth": 50
+    }
+  ]
+}

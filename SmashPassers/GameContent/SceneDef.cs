@@ -5,6 +5,7 @@ using Jelly;
 using Jelly.GameContent;
 using Jelly.Graphics;
 using Jelly.Utilities;
+using Microsoft.Xna.Framework;
 
 namespace SmashPassers.GameContent;
 
@@ -12,10 +13,12 @@ public class SceneDef : RegistryEntry
 {
     public IList<JsonEntity> Entities { get; set; } = [];
 
-    public JsonCollisions Collisions { get; set; }
+    public JsonCollisions Collisions { get; set; } = new();
 
     public int? Width { get; set; }
     public int? Height { get; set; }
+
+    public Point? RespawnPoint { get; set; }
 
     public Scene Build()
     {
