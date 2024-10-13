@@ -53,7 +53,13 @@ public class PlayerBase : Actor
     protected float baseGroundFriction = 12;
     protected float baseAirAcceleration = 2;
     protected float baseAirFriction = 1;
-    protected int   baseJumpCount = 2;
+    protected float baseCooldown = 5; //unused for now
+
+    protected int baseJumpCount = 2;
+    protected int baseDashcount = 2;
+
+
+    
 
     // current
     private float moveSpeed;
@@ -62,6 +68,8 @@ public class PlayerBase : Actor
     private float fric;
 
     private int jumpCount;
+    private int dashCount;
+    private float dashCoolDwn; //unused for now
 
     private bool jumpCancelled;
     private bool wasOnGround;
@@ -186,7 +194,7 @@ public class PlayerBase : Actor
 
         if(OnGround)
         {
-            canDash = true;
+            dashCount = baseDashcount;
         }
 
         RecalculateStats();
@@ -197,11 +205,12 @@ public class PlayerBase : Actor
             var term = TerminalVelocity;
             if(InputMapping.Down.IsDown && velocity.Y > 1)
             {
-                if(velocity.Y < 10)
-                    velocity.Y = 10;
-                velocity.Y += 15 * Time.DeltaTime;
+                if(velocity.Y < 20)
+                    velocity.Y = 20;
+                velocity.Y += 20 * Time.DeltaTime;
                 grv += 5;
                 term *= 30 / 23.15f;
+                jumpCancelled = true;
             }
 
             velocity.Y = Util.Approach(velocity.Y, term, grv * Time.DeltaTime);
@@ -227,6 +236,8 @@ public class PlayerBase : Actor
                 Facing = -1;
                 velocity.X = Facing * 8;
                 velocity.Y = 0.75f * jumpSpeed;
+                jumpCount = baseJumpCount - 1;
+                dashCount = baseDashcount;
                 // walljump sfx / animation
             }
             else if(!OnGround && CheckColliding(LeftEdge.Shift(-wallDistance, 0), true))
@@ -234,6 +245,8 @@ public class PlayerBase : Actor
                 Facing = 1;
                 velocity.X = Facing * 8;
                 velocity.Y = 0.75f * jumpSpeed;
+                jumpCount = baseJumpCount - 1;
+                dashCount = baseDashcount;
                 // walljump sfx / animation
             }
             else if(jumpCount > 0)
@@ -245,10 +258,12 @@ public class PlayerBase : Actor
 
         if(!OnGround)
         {
-            if (InputMapping.Jump.Released && velocity.Y < 0 && !jumpCancelled)
+            if (InputMapping.Jump.Released && velocity.Y < 0)
             {
                 jumpCancelled = true;
                 velocity.Y /= 4;
+                if (jumpCount > 0)
+                jumpCancelled = false;
             }
         }
 
@@ -390,11 +405,11 @@ public class PlayerBase : Actor
                 {
                     Facing = InputDir;
 
-                    if(InputMapping.PrimaryFire.Pressed && canDash)
+                    if(InputMapping.PrimaryFire.Pressed && dashCount > 0)
                     {
-                        canDash = false;
                         velocity.X += MathHelper.Max(0, 15 - Math.Abs(velocity.X / 3)) * InputDir;
                         velocity.Y = MathHelper.Min(-2, velocity.Y);
+                        dashCount--;
                     }
 
                     if(OnGround)
@@ -510,7 +525,7 @@ public class PlayerBase : Actor
     {
         Renderer.SpriteBatch.DrawStringSpacesFix(
             GraphicsUtilities.Fonts.RegularFont,
-            text: $"{(velocity.X >= 0 ? " " : "")}{SpeedConverter.PpfToKph(velocity.X):F2} km/h",
+            text: $"Horizontal:{(velocity.X >= 0 ? " " : "")}{SpeedConverter.PpfToKph(velocity.X):F2} km/h",
             position: new Vector2(4, 0),
             color: Color.White,
             spaceSize: 6,
@@ -520,7 +535,7 @@ public class PlayerBase : Actor
         );
         Renderer.SpriteBatch.DrawStringSpacesFix(
             GraphicsUtilities.Fonts.RegularFont,
-            text: $"{(velocity.X >= 0 ? " " : "")}{velocity.X:F2} px",
+            text: $"Horizontal:{(velocity.X >= 0 ? " " : "")}{velocity.X:F2} px",
             position: new Vector2(4, 40),
             color: Color.White,
             spaceSize: 6,
@@ -530,7 +545,7 @@ public class PlayerBase : Actor
         );
         Renderer.SpriteBatch.DrawStringSpacesFix(
             GraphicsUtilities.Fonts.RegularFont,
-            text: $"{(velocity.Y >= 0 ? " " : "")}{SpeedConverter.PpfToKph(velocity.Y):F2} km/h",
+            text: $"Vertical:{(velocity.Y >= 0 ? " " : "")}{SpeedConverter.PpfToKph(velocity.Y):F2} km/h",
             position: new Vector2(4, 80),
             color: Color.White,
             spaceSize: 6,
@@ -540,7 +555,7 @@ public class PlayerBase : Actor
         );
         Renderer.SpriteBatch.DrawStringSpacesFix(
             GraphicsUtilities.Fonts.RegularFont,
-            text: $"{(velocity.Y >= 0 ? " " : "")}{velocity.Y:F2} px",
+            text: $"Vertical: {(velocity.Y >= 0 ? " " : "")}{velocity.Y:F2} px",
             position: new Vector2(4, 120),
             color: Color.White,
             spaceSize: 6,
@@ -550,7 +565,7 @@ public class PlayerBase : Actor
         );
         Renderer.SpriteBatch.DrawStringSpacesFix(
             GraphicsUtilities.Fonts.RegularFont,
-            text: $" {SpeedConverter.PpfToKph(Gravity) / 3.6f :F2} m/s",
+            text: $"Gravity: {SpeedConverter.PpfToKph(Gravity) / 3.6f :F2} m/s",
             position: new Vector2(4, 160),
             color: Color.White,
             spaceSize: 6,
