@@ -11,6 +11,14 @@ public class NecoPlayer : PlayerBase
     {
         base.OnCreated();
 
+        baseMoveSpeed = 20;
+        baseJumpSpeed = -12;
+        baseGroundAcceleration = 10;
+        baseGroundFriction = 12;
+        baseAirAcceleration = 2;
+        baseAirFriction = 1;
+        jumpCount = 2; 
+
         SetHitbox(MaskNormal, PivotNormal);
 
         AddAnimation(new("idle") {
