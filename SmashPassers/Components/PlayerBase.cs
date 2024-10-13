@@ -15,8 +15,8 @@ namespace SmashPassers.Components;
 
 public class PlayerBase : Actor
 {
-    public const float Gravity = 34;
-    public const float TerminalVelocity = 30;
+    public const float Gravity = 15;
+    public const float TerminalVelocity = 23.15f;
 
     private static readonly Vector2 _defaultPivot = new(240, 332);
 
@@ -53,7 +53,7 @@ public class PlayerBase : Actor
     protected float baseGroundFriction = 12;
     protected float baseAirAcceleration = 2;
     protected float baseAirFriction = 1;
-    protected int baseJumpCount = 2; 
+    protected int   baseJumpCount = 2; 
 
     // current
     private float moveSpeed;
@@ -187,7 +187,10 @@ public class PlayerBase : Actor
             canDash = true;
         }
 
-        velocity.Y = Util.Approach(velocity.Y, TerminalVelocity, Gravity * Time.DeltaTime);
+        var grv = Gravity;
+          if(!OnGround && InputMapping.Down.IsDown)
+            grv *= 5f;
+        velocity.Y = Util.Approach(velocity.Y, TerminalVelocity, grv * Time.DeltaTime);
 
         RecalculateStats();
 
@@ -497,6 +500,37 @@ public class PlayerBase : Actor
             origin: Vector2.Zero,
             scale: 4
         );
+        Renderer.SpriteBatch.DrawStringSpacesFix(
+            GraphicsUtilities.Fonts.RegularFont,
+            text: $"{(velocity.Y >= 0 ? " " : "")}{SpeedConverter.PpfToKph(velocity.Y):F2} km/h",
+            position: new Vector2(4, 80),
+            color: Color.White,
+            spaceSize: 6,
+            rotation: 0,
+            origin: Vector2.Zero,
+            scale: 4
+        );
+        Renderer.SpriteBatch.DrawStringSpacesFix(
+            GraphicsUtilities.Fonts.RegularFont,
+            text: $"{(velocity.Y >= 0 ? " " : "")}{velocity.Y:F2} px",
+            position: new Vector2(4, 120),
+            color: Color.White,
+            spaceSize: 6,
+            rotation: 0,
+            origin: Vector2.Zero,
+            scale: 4
+        );
+        Renderer.SpriteBatch.DrawStringSpacesFix(
+            GraphicsUtilities.Fonts.RegularFont,
+            text: $" {SpeedConverter.PpfToKph(Gravity) / 3.6f :F2} m/s",
+            position: new Vector2(4, 160),
+            color: Color.White,
+            spaceSize: 6,
+            rotation: 0,
+            origin: Vector2.Zero,
+            scale: 4
+        );
+        
     }
 
     private void RecalculateStats()

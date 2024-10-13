@@ -21,7 +21,7 @@
 			"levelIid": "eebcf660-73f0-11ef-81a7-7163479ae4c0",
 			"layerIid": "9007f170-73f0-11ef-bc88-5bd00a261955",
 			"entityIid": "e44bc040-73f0-11ef-bc88-5b57bb3316ff"
-		}, "worldX": 765, "worldY": 510, "widPx": 30, "heiPx": 30, "fields" : {} }]
+		}, "worldX": 735, "worldY": 2880, "widPx": 30, "heiPx": 30, "fields" : {} }]
 	}],
 	"worldLayout": "LinearHorizontal",
 	"worldGridWidth": 256,
@@ -189,7 +189,7 @@
 			"worldY": -1,
 			"worldDepth": 0,
 			"pxWid": 7620,
-			"pxHei": 1080,
+			"pxHei": 3960,
 			"__bgColor": "#696A79",
 			"bgColor": null,
 			"useAutoIdentifier": false,
