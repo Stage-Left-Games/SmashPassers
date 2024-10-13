@@ -53,7 +53,7 @@ public class PlayerBase : Actor
     protected float baseGroundFriction = 12;
     protected float baseAirAcceleration = 2;
     protected float baseAirFriction = 1;
-    protected int jumpCount = 2; 
+    protected int baseJumpCount = 2; 
 
     // current
     private float moveSpeed;
@@ -61,7 +61,7 @@ public class PlayerBase : Actor
     private float accel;
     private float fric;
 
-    private int jumpCountNow;
+    private int jumpCount;
 
     private bool jumpCancelled;
     private bool wasOnGround;
@@ -121,7 +121,8 @@ public class PlayerBase : Actor
         AnimationId = "idle";
         Entity.Depth = 50;
         Entity.Tag.Add(EntityTags.Player);
-        jumpCountNow = jumpCount;
+        MaxContinousMovementThreshold = 64f;
+        jumpCount = baseJumpCount;
     }
 
     public override void EntityAwake()
@@ -176,7 +177,7 @@ public class PlayerBase : Actor
                 Entity.Y++;
             }
 
-            jumpCountNow = jumpCount;
+            jumpCount = baseJumpCount;
             jumpCancelled = false;
         }
 
@@ -196,10 +197,10 @@ public class PlayerBase : Actor
 
         StateUpdate();
 
-        if(jumpCountNow > 0 && InputMapping.Jump.Pressed)
+        if(jumpCount > 0 && InputMapping.Jump.Pressed)
         {
             velocity.Y = jumpSpeed;
-            jumpCountNow -= 1;
+            jumpCount -= 1;
         }
 
         MoveX(velocity.X * (Time.DeltaTime * 60), () => {
@@ -330,7 +331,7 @@ public class PlayerBase : Actor
 
                     if(InputMapping.PrimaryFire.Pressed)
                     {
-                        velocity.X = 15 * InputDir;
+                        velocity.X += 15 * InputDir;
                         velocity.Y = MathHelper.Min(-2, velocity.Y);
                     }
 
