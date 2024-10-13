@@ -15,7 +15,7 @@ namespace SmashPassers.Components;
 
 public class PlayerBase : Actor
 {
-    public const float Gravity = 20;
+    public const float Gravity = 34;
     public const float TerminalVelocity = 30;
 
     private static readonly Vector2 _defaultPivot = new(240, 332);
@@ -47,7 +47,7 @@ public class PlayerBase : Actor
     }
 
     // baseline
-    protected float baseMoveSpeed = 10;
+    protected float baseMoveSpeed = 15;
     protected float baseJumpSpeed = -12;
     protected float baseGroundAcceleration = 5;
     protected float baseGroundFriction = 12;
@@ -66,6 +66,7 @@ public class PlayerBase : Actor
     private bool jumpCancelled;
     private bool wasOnGround;
     private bool onJumpthrough;
+    private bool canDash;
 
     protected bool IsRunning { get; private set; }
     protected int InputDir { get; private set; }
@@ -181,6 +182,11 @@ public class PlayerBase : Actor
             jumpCancelled = false;
         }
 
+        if(OnGround)
+        {
+            canDash = true;
+        }
+
         velocity.Y = Util.Approach(velocity.Y, TerminalVelocity, Gravity * Time.DeltaTime);
 
         RecalculateStats();
@@ -197,10 +203,37 @@ public class PlayerBase : Actor
 
         StateUpdate();
 
-        if(jumpCount > 0 && InputMapping.Jump.Pressed)
+        if(InputMapping.Jump.Pressed)
         {
-            velocity.Y = jumpSpeed;
-            jumpCount -= 1;
+            var wallDistance = (int)Math.Max(1, moveSpeed / 2);
+            if(!OnGround && CheckColliding(RightEdge.Shift(wallDistance, 0), true))
+            {
+                Facing = -1;
+                velocity.X = Facing * 8;
+                velocity.Y = 0.75f * jumpSpeed;
+                // walljump sfx / animation
+            }
+            else if(!OnGround && CheckColliding(LeftEdge.Shift(-wallDistance, 0), true))
+            {
+                Facing = 1;
+                velocity.X = Facing * 8;
+                velocity.Y = 0.75f * jumpSpeed;
+                // walljump sfx / animation
+            }
+            else if(jumpCount > 0)
+            {
+                velocity.Y = jumpSpeed;
+                jumpCount -= 1;
+            }
+        }
+
+        if(!OnGround)
+        {
+            if (InputMapping.Jump.Released && velocity.Y < 0 && !jumpCancelled)
+            {
+                jumpCancelled = true;
+                velocity.Y /= 4;
+            }
         }
 
         MoveX(velocity.X * (Time.DeltaTime * 60), () => {
@@ -239,6 +272,7 @@ public class PlayerBase : Actor
                 }
             }
         });
+
         MoveY(velocity.Y * (Time.DeltaTime * 60), () => {
             if(!(InputMapping.Down.IsDown && CheckCollidingJumpthrough(BottomEdge.Shift(new(0, 1)))))
                 velocity.Y = 0;
@@ -329,9 +363,10 @@ public class PlayerBase : Actor
                 {
                     Facing = InputDir;
 
-                    if(InputMapping.PrimaryFire.Pressed)
+                    if(InputMapping.PrimaryFire.Pressed && canDash)
                     {
-                        velocity.X += 15 * InputDir;
+                        canDash = false;
+                        velocity.X += MathHelper.Max(0, 15 - Math.Abs(velocity.X / 3)) * InputDir;
                         velocity.Y = MathHelper.Min(-2, velocity.Y);
                     }
 
@@ -372,27 +407,19 @@ public class PlayerBase : Actor
                     }
                 }
 
-                if(!OnGround)
+                if (OnGround)
                 {
-                    if(InputMapping.Jump.Released && velocity.Y < 0 && !jumpCancelled)
-                    {
-                        jumpCancelled = true;
-                        velocity.Y /= 2;
-                    }
-                }
-                else
-                {
-                    if(onJumpthrough && InputMapping.Down.IsDown && !CheckColliding(BottomEdge.Shift(new(0, 2)), true))
+                    if (onJumpthrough && InputMapping.Down.IsDown && !CheckColliding(BottomEdge.Shift(new(0, 2)), true))
                     {
                         Entity.Y += 2;
 
                         onJumpthrough = CheckCollidingJumpthrough(BottomEdge.Shift(0, 1));
-                        if(onJumpthrough) OnGround = true;
+                        if (onJumpthrough) OnGround = true;
                         else OnGround = CheckColliding(BottomEdge.Shift(0, 1));
                     }
                 }
 
-                FxTrail = Math.Abs(velocity.X) > 1f * moveSpeed;
+                FxTrail = Math.Abs(velocity.X) > 10;
 
                 // ...
 
@@ -446,6 +473,30 @@ public class PlayerBase : Actor
         }
 
         sprite.Draw(Entity.Position.ToVector2());
+    }
+
+    public override void DrawUI()
+    {
+        Renderer.SpriteBatch.DrawStringSpacesFix(
+            GraphicsUtilities.Fonts.RegularFont,
+            text: $"{(velocity.X >= 0 ? " " : "")}{SpeedConverter.PpfToKph(velocity.X):F2} km/h",
+            position: new Vector2(4, 0),
+            color: Color.White,
+            spaceSize: 6,
+            rotation: 0,
+            origin: Vector2.Zero,
+            scale: 4
+        );
+        Renderer.SpriteBatch.DrawStringSpacesFix(
+            GraphicsUtilities.Fonts.RegularFont,
+            text: $"{(velocity.X >= 0 ? " " : "")}{velocity.X:F2} px",
+            position: new Vector2(4, 40),
+            color: Color.White,
+            spaceSize: 6,
+            rotation: 0,
+            origin: Vector2.Zero,
+            scale: 4
+        );
     }
 
     private void RecalculateStats()

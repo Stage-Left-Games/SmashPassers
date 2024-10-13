@@ -9,6 +9,7 @@ using Jelly;
 using Jelly.Graphics;
 
 using SmashPassers.GameContent;
+using SmashPassers.Graphics;
 
 namespace SmashPassers;
 
@@ -50,16 +51,16 @@ public class Main : Game
 
         camera = new Camera();
 
+        GraphicsUtilities.LoadContent(Content);
+
         ContentLoader.Init(Content);
 
+        // Registry
         RegistryManager.Initialize();
 
-        // Registry
         JellyBackend.Initialize(new ContentLoader());
 
         LocalizationManager.CurrentLanguage = "en-us";
-
-        // TODO: Add your initialization logic here
 
         base.Initialize();
     }
@@ -110,15 +111,17 @@ public class Main : Game
             Vector2 pos = Vector2.Zero;
             foreach(var player in Players)
             {
-                var component = player.GetComponent<SmashPassers.Components.PlayerBase>();
+                var component = player.GetComponent<Components.PlayerBase>();
                 pos += component.Center.ToVector2() + new Vector2(
-                    component.velocity.X * 24,
+                    MathHelper.Clamp(component.velocity.X * 24, -Renderer.ScreenSize.X / 2f, Renderer.ScreenSize.X / 2f),
                     component.velocity.Y * component.velocity.Y / 4 * Math.Sign(component.velocity.Y)
                 );
             }
             pos /= Players.Count;
 
-            Camera.Position += (pos + new Vector2(-Renderer.ScreenSize.X / 2f, -Renderer.ScreenSize.Y / 2f) - Camera.Position) / 8f;
+            var halfScreen = new Vector2(Renderer.ScreenSize.X / 2f, Renderer.ScreenSize.Y / 2f);
+
+            Camera.Position += (pos - halfScreen - Camera.Position) / 8f;
         }
         else
             Camera.Position += (Vector2.Zero - Camera.Position) / 8f;
@@ -149,7 +152,7 @@ public class Main : Game
 
         // Set culling region
         var rect = GraphicsDevice.ScissorRectangle;
-        GraphicsDevice.ScissorRectangle = new(-(int)Camera.Position.X, -(int)Camera.Position.Y, Scene?.Width ?? Renderer.ScreenSize.X, Scene?.Height ?? Renderer.ScreenSize.Y);
+        // GraphicsDevice.ScissorRectangle = new(-(int)Camera.Position.X, -(int)Camera.Position.Y, Scene?.Width ?? Renderer.ScreenSize.X, Scene?.Height ?? Renderer.ScreenSize.Y);
 
         if(Scene is not null)
         {

@@ -11,8 +11,7 @@ public class NecoPlayer : PlayerBase
     {
         base.OnCreated();
 
-        baseMoveSpeed = 20;
-        baseJumpSpeed = -12;
+        baseJumpSpeed = -14;
         baseGroundAcceleration = 10;
         baseGroundFriction = 12;
         baseAirAcceleration = 5;
