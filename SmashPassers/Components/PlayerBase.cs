@@ -15,7 +15,7 @@ namespace SmashPassers.Components;
 
 public class PlayerBase : Actor
 {
-    public const float Gravity = 15;
+    public const float Gravity = 20;
     public const float TerminalVelocity = 23.15f;
 
     private static readonly Vector2 _defaultPivot = new(240, 332);
@@ -53,7 +53,7 @@ public class PlayerBase : Actor
     protected float baseGroundFriction = 12;
     protected float baseAirAcceleration = 2;
     protected float baseAirFriction = 1;
-    protected int   baseJumpCount = 2; 
+    protected int   baseJumpCount = 2;
 
     // current
     private float moveSpeed;
@@ -67,6 +67,8 @@ public class PlayerBase : Actor
     private bool wasOnGround;
     private bool onJumpthrough;
     private bool canDash;
+
+    protected bool GroundPoundBoost { get; set; } = true;
 
     protected bool IsRunning { get; private set; }
     protected int InputDir { get; private set; }
@@ -187,12 +189,23 @@ public class PlayerBase : Actor
             canDash = true;
         }
 
-        var grv = Gravity;
-          if(!OnGround && InputMapping.Down.IsDown)
-            grv *= 5f;
-        velocity.Y = Util.Approach(velocity.Y, TerminalVelocity, grv * Time.DeltaTime);
-
         RecalculateStats();
+
+        if(!OnGround)
+        {
+            var grv = Gravity;
+            var term = TerminalVelocity;
+            if(InputMapping.Down.IsDown && velocity.Y > 1)
+            {
+                if(velocity.Y < 10)
+                    velocity.Y = 10;
+                velocity.Y += 15 * Time.DeltaTime;
+                grv += 5;
+                term *= 30 / 23.15f;
+            }
+
+            velocity.Y = Util.Approach(velocity.Y, term, grv * Time.DeltaTime);
+        }
 
         if(!_stateJustChanged)
         {
@@ -239,6 +252,12 @@ public class PlayerBase : Actor
             }
         }
 
+        if(Input.GetDown(Keys.LeftControl))
+        {
+            velocity = Vector2.Zero;
+            Entity.Position = Main.Camera.MousePositionInWorld;
+        }
+
         MoveX(velocity.X * (Time.DeltaTime * 60), () => {
             if(State == "dead")
             {
@@ -277,6 +296,11 @@ public class PlayerBase : Actor
         });
 
         MoveY(velocity.Y * (Time.DeltaTime * 60), () => {
+            if(InputMapping.Down.IsDown && GroundPoundBoost)
+            {
+                if(InputDir != 0 && velocity.X * InputDir < 3)
+                    velocity.X = 7.5f * InputDir * (velocity.Y / TerminalVelocity * 2 - 0.5f);
+            }
             if(!(InputMapping.Down.IsDown && CheckCollidingJumpthrough(BottomEdge.Shift(new(0, 1)))))
                 velocity.Y = 0;
         });
@@ -475,6 +499,10 @@ public class PlayerBase : Actor
             img.Draw();
         }
 
+        sprite.CurrentAnimation.Scale = new(
+            MathHelper.Min(1, (TerminalVelocity - velocity.Y) / 40 + 0.9f),
+            sprite.CurrentAnimation.Scale.Y
+        );
         sprite.Draw(Entity.Position.ToVector2());
     }
 
@@ -530,7 +558,6 @@ public class PlayerBase : Actor
             origin: Vector2.Zero,
             scale: 4
         );
-        
     }
 
     private void RecalculateStats()
@@ -542,8 +569,8 @@ public class PlayerBase : Actor
         fric = baseGroundFriction;
         if(!OnGround)
         {
-            accel = baseAirAcceleration;
-            fric = baseAirFriction;
+            accel = baseAirAcceleration * MathHelper.Min(1, (TerminalVelocity - velocity.Y) / 40 + 0.9f);
+            fric = baseAirFriction * MathHelper.Min(1, (TerminalVelocity - velocity.Y) / 40 + 0.9f);
         }
     }
 }
