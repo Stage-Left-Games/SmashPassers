@@ -7,7 +7,9 @@ using Microsoft.Xna.Framework.Input;
 
 using Jelly;
 using Jelly.Graphics;
+using Jelly.Utilities;
 
+using SmashPassers.Components;
 using SmashPassers.GameContent;
 using SmashPassers.Graphics;
 
@@ -22,7 +24,7 @@ public class Main : Game
 
     public static Camera Camera => camera;
     public static Logger Logger { get; } = new("Main");
-    public static List<Entity> Players { get; } = [];
+    public static List<PlayerBase> Players { get; } = [];
 
     public Main()
     {
@@ -111,10 +113,9 @@ public class Main : Game
             Vector2 pos = Vector2.Zero;
             foreach(var player in Players)
             {
-                var component = player.GetComponent<Components.PlayerBase>();
-                pos += component.Center.ToVector2() + new Vector2(
-                    MathHelper.Clamp(component.velocity.X * 24, -Renderer.ScreenSize.X / 2f, Renderer.ScreenSize.X / 2f),
-                    component.velocity.Y * component.velocity.Y / 4 * Math.Sign(component.velocity.Y)
+                pos += player.Center.ToVector2() + new Vector2(
+                    MathHelper.Clamp(player.velocity.X * 24, -Renderer.ScreenSize.X / 2f, Renderer.ScreenSize.X / 2f),
+                    MathUtil.Sqr(player.velocity.Y) / 4 * Math.Sign(player.velocity.Y)
                 );
             }
             pos /= Players.Count;

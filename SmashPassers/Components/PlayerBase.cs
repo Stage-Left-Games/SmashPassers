@@ -10,6 +10,7 @@ using Jelly.Components;
 using Jelly.Graphics;
 
 using SmashPassers.Graphics;
+using Jelly.Utilities;
 
 namespace SmashPassers.Components;
 
@@ -24,7 +25,7 @@ public class PlayerBase : Actor
 
     public Point HitboxOffset { get => bboxOffset; set => bboxOffset = value; }
 
-    private string _state = "normal"; // please do NOT touch this thx
+    private string _state = BaseStates.Normal; // please do NOT touch this thx
     private bool _stateJustChanged;
 
     public int StateTimer { get; protected set; }
@@ -46,6 +47,16 @@ public class PlayerBase : Actor
         }
     }
 
+    protected class BaseStates
+    {
+        public const string Normal = "normal";
+        public const string Dead = "dead";
+        public const string None = "none";
+    }
+
+    private Vector2 lastVelocity;
+    private Point lastPosition;
+
     // baseline
     protected float baseMoveSpeed = 15;
     protected float baseJumpSpeed = -12;
@@ -53,30 +64,37 @@ public class PlayerBase : Actor
     protected float baseGroundFriction = 12;
     protected float baseAirAcceleration = 2;
     protected float baseAirFriction = 1;
-    protected float baseCooldown = 5; //unused for now
+    protected float baseAbilityCooldown = 5;
 
-    protected int baseJumpCount = 2;
-    protected int baseDashcount = 2;
-
-
-    
+    protected int baseJumpCount = 1;
+    protected int baseBoostCount = 1;
 
     // current
-    private float moveSpeed;
-    private float jumpSpeed;
+    protected bool canUseAbility;
+    protected bool canBoost;
+    protected bool canJump;
+    protected bool canWallJump;
+    protected bool canLedgeGrab;
+    protected bool useGravity;
+
+    protected float moveSpeed;
+    protected float jumpSpeed;
+    protected int jumpCount;
+    protected int boostCount;
     private float accel;
     private float fric;
 
-    private int jumpCount;
-    private int dashCount;
-    private float dashCoolDwn; //unused for now
+    private float abilityCooldown;
+    private float boostedJumpTimer;
+    private float boostedJumpSpeed;
+    private float jumpEarlyBuffer;
+    private float coyoteJumpBuffer;
 
-    private bool jumpCancelled;
+    private bool sloping;
     private bool wasOnGround;
     private bool onJumpthrough;
-    private bool canDash;
 
-    protected bool GroundPoundBoost { get; set; } = true;
+    protected bool CanGroundPoundBoost { get; set; } = true;
 
     protected bool IsRunning { get; private set; }
     protected int InputDir { get; private set; }
@@ -138,15 +156,30 @@ public class PlayerBase : Actor
 
     public override void EntityAwake()
     {
-        Main.Players.Add(Entity);
         base.EntityAwake();
+
+        Main.Players.Add(this);
+    }
+
+    public override void OnEnable()
+    {
+        base.OnEnable();
+
+        Main.Players.Add(this);
+    }
+
+    public override void OnDisable()
+    {
+        base.OnDisable();
+
+        Main.Players.Remove(this);
     }
 
     public override void SceneEnd(Scene scene)
     {
-        Main.Players.Remove(Entity);
-
         base.SceneEnd(scene);
+
+        Main.Players.Remove(this);
     }
 
     protected void AddAnimation(AnimatedSprite.Animation animation)
@@ -174,49 +207,29 @@ public class PlayerBase : Actor
         if(onJumpthrough) OnGround = true;
         else OnGround = CheckColliding(BottomEdge.Shift(0, 1));
 
-        if(!wasOnGround && OnGround)
-        {
-            // onland
-            if(!CheckColliding(BottomEdge.Shift(1, 1)))
-            {
-                Entity.X++;
-                Entity.Y++;
-            }
-            else if(!CheckColliding(BottomEdge.Shift(-1, 1)))
-            {
-                Entity.X--;
-                Entity.Y++;
-            }
-
-            jumpCount = baseJumpCount;
-            jumpCancelled = false;
-        }
+        abilityCooldown = MathUtil.Approach(abilityCooldown, 0, Time.DeltaTime);
 
         if(OnGround)
         {
-            dashCount = baseDashcount;
+            if (!wasOnGround)
+            {
+                OnLand();
+            }
+
+            canBoost = true;
+            boostCount = baseBoostCount;
+            coyoteJumpBuffer = 10/60f;
+            boostedJumpTimer = MathUtil.Approach(boostedJumpTimer, 0, Time.DeltaTime);
+        }
+        else
+        {
+            coyoteJumpBuffer = MathUtil.Approach(coyoteJumpBuffer, 0, Time.DeltaTime);
+            jumpEarlyBuffer = MathUtil.Approach(jumpEarlyBuffer, 0, Time.DeltaTime);
         }
 
         RecalculateStats();
 
-        if(!OnGround)
-        {
-            var grv = Gravity;
-            var term = TerminalVelocity;
-            if(InputMapping.Down.IsDown && velocity.Y > 1)
-            {
-                if(velocity.Y < 20)
-                    velocity.Y = 20;
-                velocity.Y += 20 * Time.DeltaTime;
-                grv += 5;
-                term *= 30 / 23.15f;
-                jumpCancelled = true;
-            }
-
-            velocity.Y = Util.Approach(velocity.Y, term, grv * Time.DeltaTime);
-        }
-
-        if(!_stateJustChanged)
+        if (!_stateJustChanged)
         {
             CollidesWithJumpthroughs = true;
             CollidesWithSolids = true;
@@ -228,97 +241,70 @@ public class PlayerBase : Actor
 
         StateUpdate();
 
-        if(InputMapping.Jump.Pressed)
+        if(OnGround && InputMapping.Down.Pressed && !onJumpthrough)
         {
-            var wallDistance = (int)Math.Max(1, moveSpeed / 2);
-            if(!OnGround && CheckColliding(RightEdge.Shift(wallDistance, 0), true))
+            velocity.Y += Gravity * 4 * Time.DeltaTime;
+        }
+
+        if (!OnGround && useGravity)
+        {
+            var grv = Gravity;
+            var term = TerminalVelocity;
+            if (InputMapping.Down.IsDown && velocity.Y > 2 && !onJumpthrough)
             {
-                Facing = -1;
-                velocity.X = Facing * 8;
-                velocity.Y = 0.75f * jumpSpeed;
-                jumpCount = baseJumpCount - 1;
-                dashCount = baseDashcount;
-                // walljump sfx / animation
+                if (velocity.Y < 20)
+                    velocity.Y = 20;
+                velocity.Y += 20 * Time.DeltaTime;
+                grv += 5;
+                term *= 30 / 23.15f;
             }
-            else if(!OnGround && CheckColliding(LeftEdge.Shift(-wallDistance, 0), true))
+
+            velocity.Y = MathUtil.Approach(velocity.Y, term, grv * Time.DeltaTime);
+        }
+
+        if (InputMapping.Jump.Pressed || (OnGround && jumpEarlyBuffer > 0))
+        {
+            if(!OnGround)
+                jumpEarlyBuffer = 15/60f;
+
+            if(!TryWallJump() && canJump)
             {
-                Facing = 1;
-                velocity.X = Facing * 8;
-                velocity.Y = 0.75f * jumpSpeed;
-                jumpCount = baseJumpCount - 1;
-                dashCount = baseDashcount;
-                // walljump sfx / animation
-            }
-            else if(jumpCount > 0)
-            {
-                velocity.Y = jumpSpeed;
-                jumpCount -= 1;
+                if(!OnGround && coyoteJumpBuffer > 0 && velocity.Y > 0)
+                {
+                    coyoteJumpBuffer = 0;
+                    DoJump(false);
+                }
+                else if(OnGround && boostedJumpTimer > 0)
+                {
+                    boostedJumpTimer = 0;
+                    DoJump(false, MathHelper.Max(1, boostedJumpSpeed));
+                }
+                else if(jumpCount > 0)
+                    DoJump();
             }
         }
 
-        if(!OnGround)
+        if (!OnGround && canJump)
         {
             if (InputMapping.Jump.Released && velocity.Y < 0)
             {
-                jumpCancelled = true;
                 velocity.Y /= 4;
-                if (jumpCount > 0)
-                jumpCancelled = false;
             }
         }
 
-        if(Input.GetDown(Keys.LeftControl))
+        if (Input.GetDown(Keys.LeftControl))
         {
             velocity = Vector2.Zero;
             Entity.Position = Main.Camera.MousePositionInWorld;
         }
 
-        MoveX(velocity.X * (Time.DeltaTime * 60), () => {
-            if(State == "dead")
-            {
-                velocity.X = -velocity.X * 0.9f;
-            }
-            else for(int j = 0; j < Util.RoundToInt(MathHelper.Max(Time.DeltaTime, 1)); j++)
-            {
-                var nudgeDistance = OnGround ? -15 : -10;
-                if(InputDir != 0 && !CheckColliding(Hitbox.Shift(InputDir, nudgeDistance)))
-                {
-                    if(CheckColliding(Hitbox.Shift(InputDir, 0), true) && !CheckColliding(Hitbox.Shift(0, nudgeDistance), true))
-                    {
-                        MoveY(nudgeDistance, null);
-                        MoveX(InputDir * -nudgeDistance, null);
-                    }
-                }
-                else
-                {
-                    // if (Math.Abs(velocity.X) >= 1)
-                    // {
-                    //     _audio_play_sound(sn_player_land, 0, false);
-                    //     for (int i = 0; i < 3; i++)
-                    //     {
-                    //         with(instance_create_depth((x + (4 * sign(facing))), random_range((bbox_bottom - 12), (bbox_bottom - 2)), (depth - 1), fx_dust))
-                    //         {
-                    //             sprite_index = spr_fx_dust2;
-                    //             vy = (Math.Abs(other.velocity.Y) > 0.6) ? other.velocity.Y * 0.5 : vy;
-                    //             vz = 0;
-                    //         }
-                    //     }
-                    // }
-                    velocity.X = 0;
-                    break;
-                }
-            }
-        });
+        if(!float.IsNormal(velocity.X)) velocity.X = 0;
+        if(!float.IsNormal(velocity.Y)) velocity.Y = 0;
 
-        MoveY(velocity.Y * (Time.DeltaTime * 60), () => {
-            if(InputMapping.Down.IsDown && GroundPoundBoost)
-            {
-                if(InputDir != 0 && velocity.X * InputDir < 3)
-                    velocity.X = 7.5f * InputDir * (velocity.Y / TerminalVelocity * 2 - 0.5f);
-            }
-            if(!(InputMapping.Down.IsDown && CheckCollidingJumpthrough(BottomEdge.Shift(new(0, 1)))))
-                velocity.Y = 0;
-        });
+        lastPosition = Entity.Position;
+
+        MoveX(velocity.X * (Time.DeltaTime * 60), OnCollideX);
+        MoveY(velocity.Y * (Time.DeltaTime * 60), OnCollideY);
 
         // if(Left < 0)
         // {
@@ -344,13 +330,14 @@ public class PlayerBase : Actor
         //     velocity.Y = 0;
         // }
 
-        if(FxTrail)
+        if (FxTrail)
         {
             fxTrailCounter++;
-            if(fxTrailCounter >= 3)
+            if (fxTrailCounter >= 3)
             {
                 fxTrailCounter = 0;
-                afterImages.Add(new AfterImage {
+                afterImages.Add(new AfterImage
+                {
                     TexturePath = sprite.CurrentAnimation.ActiveTexturePath,
                     Position = Entity.Position.ToVector2() + sprite.CurrentAnimation.ActiveOffset,
                     SpriteEffects = sprite.CurrentAnimation.SpriteEffects,
@@ -367,30 +354,181 @@ public class PlayerBase : Actor
             fxTrailCounter = 0;
         }
 
-        for(int i = 0; i < afterImages.Count; i++)
+        for (int i = 0; i < afterImages.Count; i++)
         {
             AfterImage image = afterImages[i];
 
-            image.Alpha = MathHelper.Max(image.Alpha - (1/20f), 0);
-            if(image.Alpha == 0)
+            image.Alpha = MathHelper.Max(image.Alpha - (1 / 20f), 0);
+            if (image.Alpha == 0)
             {
                 afterImages.RemoveAt(i);
                 i--;
             }
         }
+
+        lastVelocity = velocity;
+    }
+
+    protected virtual void OnCollideX()
+    {
+        if (State == BaseStates.Dead)
+        {
+            velocity.X = -velocity.X * 0.9f;
+        }
+        else for (int j = 0; j < MathUtil.RoundToInt(MathHelper.Max(Time.DeltaTime * 60, 1)); j++)
+        {
+            bool slopeCondition = !sloping || (sloping && InputDir == Math.Sign(Entity.X - lastPosition.X));
+            var nudgeDistance = OnGround ? -15 : -10;
+            if (InputDir != 0 && slopeCondition && !CheckColliding(Hitbox.Shift(InputDir, nudgeDistance), true))
+            {
+                int n = 0;
+                if (CheckColliding(Hitbox.Shift(InputDir, 0), true))
+                {
+                    if (OnGround) velocity.Y = 0;
+
+                    while (n < Math.Abs(nudgeDistance))
+                    {
+                        MoveY(-1, null);
+                        n++;
+                    }
+                    MoveX(InputDir * Math.Abs(nudgeDistance), null);
+                }
+            }
+            else if (InputDir != 0 && slopeCondition && !CheckColliding(Hitbox.Shift(InputDir, 10)))
+            {
+                int n = 0;
+                if (CheckColliding(Hitbox.Shift(InputDir, 0), true))
+                {
+                    while (n < 10)
+                    {
+                        MoveY(1, null);
+                        n++;
+                    }
+                    MoveX(InputDir, null);
+                }
+            }
+            else
+            {
+                // if (Math.Abs(velocity.X) >= 1)
+                // {
+                //     _audio_play_sound(sn_player_land, 0, false);
+                //     for (int i = 0; i < 3; i++)
+                //     {
+                //         with(instance_create_depth((x + (4 * sign(facing))), random_range((bbox_bottom - 12), (bbox_bottom - 2)), (depth - 1), fx_dust))
+                //         {
+                //             sprite_index = spr_fx_dust2;
+                //             vy = (Math.Abs(other.velocity.Y) > 0.6) ? other.velocity.Y * 0.5 : vy;
+                //             vz = 0;
+                //         }
+                //     }
+                // }
+                velocity.X = 0;
+                break;
+            }
+        }
+    }
+
+    protected virtual void OnCollideY()
+    {
+        if (velocity.Y > 0)
+        {
+            if (InputMapping.Down.IsDown)
+            {
+                if (CanGroundPoundBoost && (!sloping || Math.Sign(Entity.X - lastPosition.X) != InputDir))
+                {
+                    if (InputDir != 0 && velocity.X * InputDir < 3)
+                        velocity.X = 7.5f * InputDir * (velocity.Y / TerminalVelocity * 2 - 0.5f);
+                    boostedJumpTimer = 10 / 60f;
+                    boostedJumpSpeed = velocity.Y / TerminalVelocity * 1.5f - 0.5f;
+                }
+
+                if (CheckCollidingJumpthrough(BottomEdge.Shift(new(0, 1))))
+                    return;
+            }
+
+            if(sloping)
+            {
+                velocity.X = MathHelper.Max(Math.Abs(velocity.Y) * 1.2f, Math.Abs(velocity.X)) * Math.Sign(Entity.X - lastPosition.X);
+            }
+        }
+
+        velocity.Y = 0;
+    }
+
+    protected bool TryWallJump(float horizontalSpeedMultiplier = 1)
+    {
+        if(OnGround) return false;
+        if(!canWallJump) return false;
+
+        var wallDistance = (int)Math.Max(1, Math.Abs(velocity.X) / 2);
+        if (CheckColliding(RightEdge.Shift(wallDistance, 0), true) && CheckColliding(RightEdge.Shift(wallDistance, -15), true))
+        {
+            State = BaseStates.Normal;
+
+            Facing = -1;
+            velocity.X = -8 * horizontalSpeedMultiplier;
+            velocity.Y = 0.75f * jumpSpeed;
+            jumpCount = baseJumpCount - 1;
+            boostCount = baseBoostCount;
+
+            // walljump sfx / animation
+
+            return true;
+        }
+        else if (CheckColliding(LeftEdge.Shift(-wallDistance, 0), true) && CheckColliding(LeftEdge.Shift(-wallDistance, -15), true))
+        {
+            State = BaseStates.Normal;
+
+            Facing = 1;
+            velocity.X = 8 * horizontalSpeedMultiplier;
+            velocity.Y = 0.75f * jumpSpeed;
+            jumpCount = baseJumpCount - 1;
+            boostCount = baseBoostCount;
+
+            // walljump sfx / animation
+
+            return true;
+        }
+
+        return false;
+    }
+
+    protected void DoJump(bool subtractJumps = true, float multiplier = 1)
+    {
+        State = BaseStates.Normal;
+
+        if(sloping) velocity.X = Math.Max(Math.Abs(velocity.Y), Math.Abs(velocity.X)) * Math.Sign(Entity.X - lastPosition.X);
+
+        velocity.Y = jumpSpeed * multiplier;
+
+        // begin jump animation, play sfx
+
+        if(subtractJumps)
+            jumpCount--;
+    }
+
+    protected virtual void OnLand()
+    {
+        // compensation for if player pressed jump slightly too early before landing
+        if (jumpEarlyBuffer > 0)
+        {
+            jumpEarlyBuffer = 0;
+            DoJump(false);
+        }
+
+        jumpCount = baseJumpCount;
     }
 
     protected virtual void OnStateEnter(string state)
     {
         switch(state)
         {
-            case "none":
+            case BaseStates.Normal:
                 break;
-            case "normal":
+            case BaseStates.Dead:
+                velocity.X = MathHelper.Clamp(velocity.X, -8, 8);
                 break;
-            case "dead":
-                break;
-            default:
+            case BaseStates.None: default:
                 break;
         }
     }
@@ -399,17 +537,17 @@ public class PlayerBase : Actor
     {
         switch (_state)
         {
-            case "normal":
+            case BaseStates.Normal:
             {
                 if(InputDir != 0)
                 {
                     Facing = InputDir;
 
-                    if(InputMapping.PrimaryFire.Pressed && dashCount > 0)
+                    if(canBoost && boostCount > 0 && InputMapping.Boost.Pressed)
                     {
                         velocity.X += MathHelper.Max(0, 15 - Math.Abs(velocity.X / 3)) * InputDir;
                         velocity.Y = MathHelper.Min(-2, velocity.Y);
-                        dashCount--;
+                        boostCount--;
                     }
 
                     if(OnGround)
@@ -423,22 +561,22 @@ public class PlayerBase : Actor
                         if(OnGround && InputDir * velocity.X < -2)
                             AnimationId = "skid";
 
-                        velocity.X = Util.Approach(velocity.X, 0, fric * Time.DeltaTime);
+                        velocity.X = MathUtil.Approach(velocity.X, 0, fric * Time.DeltaTime);
                     }
                     if(InputDir * velocity.X < moveSpeed)
                     {
-                        velocity.X = Util.Approach(velocity.X, InputDir * moveSpeed, accel * Time.DeltaTime);
+                        velocity.X = MathUtil.Approach(velocity.X, InputDir * moveSpeed, accel * Time.DeltaTime);
                     }
 
                     if(InputDir * velocity.X > moveSpeed && OnGround)
                     {
-                        velocity.X = Util.Approach(velocity.X, InputDir * moveSpeed, fric * 2 * Time.DeltaTime);
+                        velocity.X = MathUtil.Approach(velocity.X, InputDir * moveSpeed, fric * 2 * Time.DeltaTime);
                     }
                 }
                 else
                 {
                     IsRunning = false;
-                    velocity.X = Util.Approach(velocity.X, 0, fric * 2 * Time.DeltaTime);
+                    velocity.X = MathUtil.Approach(velocity.X, 0, fric * 2 * Time.DeltaTime);
 
                     if(OnGround)
                     {
@@ -451,7 +589,7 @@ public class PlayerBase : Actor
 
                 if (OnGround)
                 {
-                    if (onJumpthrough && InputMapping.Down.IsDown && !CheckColliding(BottomEdge.Shift(new(0, 2)), true))
+                    if (onJumpthrough && velocity.Y == 0 && InputMapping.Down.IsDown && !CheckColliding(BottomEdge.Shift(new(0, 2)), true))
                     {
                         Entity.Y += 2;
 
@@ -467,7 +605,21 @@ public class PlayerBase : Actor
 
                 break;
             }
-            case "none": default:
+
+            case BaseStates.Dead:
+            {
+                velocity.X = MathUtil.Approach(velocity.X, 0, 5 * Time.DeltaTime);
+
+                if(!OnGround)
+                    velocity.Y = MathUtil.Approach(velocity.Y, TerminalVelocity, Gravity * Time.DeltaTime);
+
+                MoveX(velocity.X * (Time.DeltaTime * 60), () => velocity.X *= -0.8f);
+                MoveX(velocity.Y * (Time.DeltaTime * 60), () => velocity.Y = 0);
+
+                break;
+            }
+
+            case BaseStates.None: default:
                 break;
         }
     }
@@ -476,13 +628,11 @@ public class PlayerBase : Actor
     {
         switch(state)
         {
-            case "none":
+            case BaseStates.Normal:
                 break;
-            case "normal":
+            case BaseStates.Dead:
                 break;
-            case "dead":
-                break;
-            default:
+            case BaseStates.None: default:
                 break;
         }
     }
@@ -573,6 +723,26 @@ public class PlayerBase : Actor
             origin: Vector2.Zero,
             scale: 4
         );
+        Renderer.SpriteBatch.DrawStringSpacesFix(
+            GraphicsUtilities.Fonts.RegularFont,
+            text: $"State: {_state}",
+            position: new Vector2(4, 200),
+            color: Color.White,
+            spaceSize: 6,
+            rotation: 0,
+            origin: Vector2.Zero,
+            scale: 4
+        );
+        Renderer.SpriteBatch.DrawStringSpacesFix(
+            GraphicsUtilities.Fonts.RegularFont,
+            text: $"Sloping: {sloping}",
+            position: new Vector2(4, 240),
+            color: Color.White,
+            spaceSize: 6,
+            rotation: 0,
+            origin: Vector2.Zero,
+            scale: 4
+        );
     }
 
     private void RecalculateStats()
@@ -580,12 +750,147 @@ public class PlayerBase : Actor
         moveSpeed = baseMoveSpeed;
         jumpSpeed = baseJumpSpeed;
 
+        useGravity = true;
+        canJump = true;
+        canWallJump = true;
+        canUseAbility = true;
+
         accel = baseGroundAcceleration;
         fric = baseGroundFriction;
         if(!OnGround)
         {
             accel = baseAirAcceleration * MathHelper.Min(1, (TerminalVelocity - velocity.Y) / 40 + 0.9f);
             fric = baseAirFriction * MathHelper.Min(1, (TerminalVelocity - velocity.Y) / 40 + 0.9f);
+        }
+    }
+
+    // to gan: please, dont touch this lmao
+    // it'll break really bad its so finicky
+    public override void MoveX(float amount, Action? onCollide)
+    {
+		if(!float.IsNormal(amount)) amount = 0;
+
+        RemainderX += amount;
+        int move = (int)Math.Round(RemainderX);
+        RemainderX -= move;
+
+        if(move != 0)
+        {
+			if(!Collidable || Math.Abs(amount) > MaxContinousMovementThreshold)
+			{
+				Entity.X += move;
+				return;
+			}
+
+            int sign = Math.Sign(move);
+            while(move != 0)
+            {
+                bool col1 = CheckColliding((sign >= 0 ? RightEdge : LeftEdge).Shift(sign, 0));
+                if(NudgeOnMove && col1 && !CheckColliding((sign >= 0 ? RightEdge : LeftEdge).Shift(sign, -1), true))
+                {
+                    // slope up
+                    Entity.X += sign;
+                    Entity.Y -= 1;
+                    if(Math.Abs(velocity.X) > 5 && InputDir == sign)
+                        velocity.X -= 0.03f * sign;
+                    move -= sign;
+                }
+                else if(!col1)
+                {
+                    if(NudgeOnMove && OnGround)
+                    {
+                        // slope down
+                        if(!CheckColliding(BottomEdge.Shift(sign, 1)) && CheckColliding(BottomEdge.Shift(sign, 2)))
+                        {
+                            Entity.Y += 1;
+                            if(InputDir == sign)
+                                velocity.Y += 0.02f;
+                        }
+                    }
+                    Entity.X += sign;
+                    move -= sign;
+                }
+                else
+                {
+                    onCollide?.Invoke();
+                    break;
+                }
+            }
+        }
+    }
+
+    public override void MoveY(float amount, Action? onCollide)
+    {
+		if(!float.IsNormal(amount)) amount = 0;
+
+        RemainderY += amount;
+        int move = (int)Math.Round(RemainderY);
+        RemainderY -= move;
+
+        if(move != 0)
+        {
+			if(!Collidable || Math.Abs(amount) > MaxContinousMovementThreshold)
+			{
+				Entity.Y += move;
+				return;
+			}
+
+            int maxNudge = 5;
+
+            int sign = Math.Sign(move);
+            bool ignoreJumpthrus = sign < 0 || InputMapping.Down.IsDown;
+
+            while(move != 0)
+            {
+                var rect = (sign >= 0 ? BottomEdge : TopEdge).Shift(0, sign);
+                if (CheckColliding(rect, ignoreJumpthrus))
+                {
+                    if (InputMapping.Down.IsDown && !CheckColliding(rect.Shift(maxNudge, 0), ignoreJumpthrus))
+                    {
+                        sloping = true;
+                        velocity.X += 0.01f;
+
+                        for(var n = 0; n < maxNudge; n++)
+                        {
+                            if(!CheckColliding(LeftEdge.Shift(0, sign), ignoreJumpthrus))
+                                break;
+
+                            Entity.X++;
+                        }
+                        Entity.Y += sign;
+                        move -= sign;
+                        continue;
+                    }
+                    else if (InputMapping.Down.IsDown && !CheckColliding(rect.Shift(-maxNudge, 0), ignoreJumpthrus))
+                    {
+                        sloping = true;
+                        velocity.X += 0.01f;
+
+                        for(var n = 0; n < maxNudge; n++)
+                        {
+                            if(!CheckColliding(RightEdge.Shift(0, sign), ignoreJumpthrus))
+                                break;
+
+                            Entity.X--;
+                        }
+                        Entity.Y += sign;
+                        move -= sign;
+                        continue;
+                    }
+                    else
+                    {
+                        onCollide?.Invoke();
+                        sloping = false;
+                        break;
+                    }
+                }
+                else
+                {
+                    sloping = false;
+                    Entity.Y += sign;
+                    move -= sign;
+                }
+            }
         }
     }
 }
@@ -597,6 +902,7 @@ public class PlayerInputMapping
     public MappedInput Down { get; set; } = new MappedInput.Keyboard(Keys.S);
     public MappedInput Up { get; set; } = new MappedInput.Keyboard(Keys.W);
     public MappedInput Jump { get; set; } = new MappedInput.Keyboard(Keys.Space);
-    public MappedInput PrimaryFire { get; set; } = new MappedInput.Mouse(MouseButtons.LeftButton);
-    public MappedInput SecondaryFire { get; set; } = new MappedInput.Mouse(MouseButtons.RightButton);
+    public MappedInput Boost { get; set; } = new MappedInput.Keyboard(Keys.LeftShift);
+    public MappedInput UseMobilityTool { get; set; } = new MappedInput.Mouse(MouseButtons.LeftButton);
+    public MappedInput UseItem { get; set; } = new MappedInput.Mouse(MouseButtons.RightButton);
 }
