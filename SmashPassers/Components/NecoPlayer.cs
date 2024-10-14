@@ -17,7 +17,7 @@ public class NecoPlayer : PlayerBase
         baseGroundFriction = 12;
         baseAirAcceleration = 5;
         baseAirFriction = 1;
-        baseJumpCount = 1;
+        baseJumpCount = 2;
 
         SetHitbox(MaskNormal, PivotNormal);
 

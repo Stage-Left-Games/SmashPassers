@@ -698,7 +698,7 @@ public class PlayerBase : Actor
                 if (InputDir != 0
                     && !OnGround
                     && Math.Sign(velocity.X) == Math.Sign(InputDir)
-                    && ((Math.Abs(velocity.X) > moveSpeed * 1.5f) || wallRunReactivationTimer > 0)
+                    && ((Math.Abs(velocity.X) > moveSpeed) || wallRunReactivationTimer > 0)
                     && velocity.Y < 10
                     && CheckColliding(edge.Shift((int)moveSpeed * InputDir, 0), true)
                     && CheckColliding(edge.Shift((int)moveSpeed * InputDir, -15), true))
@@ -739,9 +739,9 @@ public class PlayerBase : Actor
                     break;
                 }
 
-                if(InputMapping.Jump.Pressed && InputDir == -Facing)
+                if(InputMapping.Jump.Pressed)
                 {
-                    wallRunReactivationTimer = 0.5f;
+                    wallRunReactivationTimer = 0.25f;
                     jumpSpeed = 0.5f * baseJumpSpeed;
                     canWallJump = true;
                     TryWallJump(3f);
@@ -1058,7 +1058,7 @@ public class PlayerInputMapping
     public MappedInput Down { get; set; } = new MappedInput.Keyboard(Keys.S);
     public MappedInput Up { get; set; } = new MappedInput.Keyboard(Keys.W);
     public MappedInput Jump { get; set; } = new MappedInput.Keyboard(Keys.Space);
-    public MappedInput Boost { get; set; } = new MappedInput.Keyboard(Keys.LeftShift);
+    public MappedInput Boost { get; set; } = new MappedInput.Mouse(MouseButtons.LeftButton);
     public MappedInput UseAbility { get; set; } = new MappedInput.Mouse(MouseButtons.LeftButton);
     public MappedInput UseItem { get; set; } = new MappedInput.Mouse(MouseButtons.RightButton);
 }
