@@ -94,6 +94,7 @@ public class PlayerBase : Actor
     private float coyoteJumpBuffer;
     private float ledgegrabCooldown;
     private float wallRunReactivationTimer;
+    private float wallRunCooldown;
 
     private bool sloping;
     private bool wasOnGround;
@@ -222,6 +223,7 @@ public class PlayerBase : Actor
         abilityCooldown = MathUtil.Approach(abilityCooldown, 0, Time.DeltaTime);
         ledgegrabCooldown = MathUtil.Approach(ledgegrabCooldown, 0, Time.DeltaTime);
         wallRunReactivationTimer = MathUtil.Approach(wallRunReactivationTimer, 0, Time.DeltaTime);
+        wallRunCooldown = MathUtil.Approach(wallRunCooldown, 0, Time.DeltaTime);
 
         if(OnGround)
         {
@@ -304,6 +306,13 @@ public class PlayerBase : Actor
             {
                 velocity.Y /= 4;
             }
+        }
+
+        if(canBoost && boostCount > 0 && InputMapping.Boost.Pressed && InputDir != 0)
+        {
+            velocity.X += MathHelper.Max(0, 15 - Math.Abs(velocity.X / 3)) * InputDir;
+            velocity.Y = MathHelper.Min(-2, velocity.Y);
+            boostCount--;
         }
 
         if(!OnGround)
@@ -613,6 +622,7 @@ public class PlayerBase : Actor
             {
                 canBoost = true;
                 canWallJump = true;
+                wallRunCooldown = 0.4f;
 
                 break;
             }
@@ -633,13 +643,6 @@ public class PlayerBase : Actor
                 if(InputDir != 0)
                 {
                     Facing = InputDir;
-
-                    if(canBoost && boostCount > 0 && InputMapping.Boost.Pressed)
-                    {
-                        velocity.X += MathHelper.Max(0, 15 - Math.Abs(velocity.X / 3)) * InputDir;
-                        velocity.Y = MathHelper.Min(-2, velocity.Y);
-                        boostCount--;
-                    }
 
                     if(OnGround)
                     {
@@ -695,7 +698,8 @@ public class PlayerBase : Actor
                 var edge = InputDir >= 0 ? RightEdge : LeftEdge;
 
                 // check for and initiate wallRun
-                if (InputDir != 0
+                if (wallRunCooldown <= 0
+                    && InputDir != 0
                     && !OnGround
                     && Math.Sign(velocity.X) == Math.Sign(InputDir)
                     && ((Math.Abs(velocity.X) > moveSpeed) || wallRunReactivationTimer > 0)
@@ -726,6 +730,7 @@ public class PlayerBase : Actor
 
             case BaseStates.WallRun:
             {
+                useGravity = false;
                 canJump = false;
                 canBoost = false;
                 canWallJump = false;
@@ -733,19 +738,26 @@ public class PlayerBase : Actor
 
                 FxTrail = true;
 
-                if(velocity.Y > -5)
+                velocity.Y = MathUtil.Approach(velocity.Y, 0, Gravity * 2 * Time.DeltaTime);
+                if(velocity.Y >= -5)
                 {
                     State = BaseStates.Normal;
+                    velocity.Y = 0;
                     break;
                 }
 
                 if(InputMapping.Jump.Pressed)
                 {
-                    wallRunReactivationTimer = 0.25f;
+                    wallRunReactivationTimer = 0.5f; // half a second
                     jumpSpeed = 0.5f * baseJumpSpeed;
                     canWallJump = true;
                     TryWallJump(3f);
                     break;
+                }
+
+                if(InputDir == -Facing)
+                {
+                    canBoost = true;
                 }
 
                 if(!CheckColliding(BottomEdge.Shift(Facing, 0), true))
@@ -753,7 +765,7 @@ public class PlayerBase : Actor
                     if (InputDir == Facing || InputDir == 0)
                     {
                         State = BaseStates.Normal;
-                        velocity.Y = MathHelper.Max(velocity.Y, jumpSpeed * 0.3f);
+                        velocity.Y = jumpSpeed * 0.1f;
 
                         if(InputDir != 0)
                             velocity.X = velAtStartOfState.X * 0.65f;

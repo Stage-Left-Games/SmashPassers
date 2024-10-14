@@ -113,7 +113,7 @@
 			"useAsyncRender": true,
 			"intGridValues": [
 				{ "value": 1, "identifier": null, "color": "#000000", "tile": null, "groupUid": 0 },
-				{ "value": 2, "identifier": "slope", "color": "#252525", "tile": null, "groupUid": 0 }
+				{ "value": 2, "identifier": "slope", "color": "#009999", "tile": null, "groupUid": 0 }
 			],
 			"intGridValuesGroups": [],
 			"autoRuleGroups": [
