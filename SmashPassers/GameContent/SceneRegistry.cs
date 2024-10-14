@@ -5,6 +5,7 @@ using Jelly.Components;
 using Jelly.GameContent;
 using Jelly.Graphics;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace SmashPassers.GameContent;
 
@@ -45,6 +46,9 @@ public class SceneRegistry : Registry<SceneDef>
             Name = name,
         };
 
+        var texPath = Path.Combine(Path.GetDirectoryName(path), "png", $"{Path.GetFileNameWithoutExtension(path)}__Collisions");
+        scene.TilesTexture = ContentLoader.LoadContent<Texture2D>(texPath);
+
         var level = LDtk.LDtkLevel.FromFile(path);
 
         var entityLayer = level.LayerInstances[0];
@@ -64,7 +68,10 @@ public class SceneRegistry : Registry<SceneDef>
             scene.Collisions.Tiles[y] = new int[gridSize.X];
             for(int x = 0; x < gridSize.X; x++)
             {
-                scene.Collisions.Tiles[y][x] = array[c];
+                if(array[c] == 1)
+                    scene.Collisions.Tiles[y][x] = 1;
+                else
+                    scene.Collisions.Tiles[y][x] = 0;
                 c++;
             }
         }
@@ -79,11 +86,13 @@ public class SceneRegistry : Registry<SceneDef>
             {
                 scene.Entities.Add(new() {
                     Position = entity.Px,
+                    Enabled = true,
+                    Visible = true,
                     Components = [
                         new Solid {
                             DefaultBehavior = false,
-                            Width = entity.Width / CollisionSystem.TileSize,
-                            Height = entity.Height / CollisionSystem.TileSize,
+                            Width = entity.Width,
+                            Height = entity.Height,
                         }
                     ]
                 });

@@ -6,6 +6,7 @@ using Jelly.GameContent;
 using Jelly.Graphics;
 using Jelly.Utilities;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace SmashPassers.GameContent;
 
@@ -19,6 +20,8 @@ public class SceneDef : RegistryEntry
     public int? Height { get; set; }
 
     public Point? RespawnPoint { get; set; }
+
+    public Texture2D? TilesTexture { get; set; }
 
     public Scene Build()
     {

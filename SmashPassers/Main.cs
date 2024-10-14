@@ -12,6 +12,7 @@ using Jelly.Utilities;
 using SmashPassers.Components;
 using SmashPassers.GameContent;
 using SmashPassers.Graphics;
+using Jelly.Components;
 
 namespace SmashPassers;
 
@@ -160,6 +161,13 @@ public class Main : Game
             foreach(var tile in Scene.CollisionSystem.Collisions)
             {
                 Renderer.SpriteBatch.Draw(Renderer.PixelTexture, tile, Color.Black);
+            }
+
+            Renderer.SpriteBatch.Draw(SceneRegistry.GetDefStatic(Scene.Name).TilesTexture, Vector2.Zero, Color.White);
+
+            foreach(var solid in Scene.Entities.FindAllWithComponent<Solid>())
+            {
+                Renderer.SpriteBatch.Draw(Renderer.PixelTexture, solid.GetComponent<Solid>().Hitbox, Color.Blue);
             }
 
             Scene.Draw();

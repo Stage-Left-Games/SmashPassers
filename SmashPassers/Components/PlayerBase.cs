@@ -52,10 +52,13 @@ public class PlayerBase : Actor
         public const string Normal = "normal";
         public const string Dead = "dead";
         public const string None = "none";
+        public const string WallRun = "wallRun";
+        public const string LedgeGrab = "ledgeGrab";
     }
 
     private Vector2 lastVelocity;
     private Point lastPosition;
+    private Vector2 velAtStartOfState;
 
     // baseline
     protected float baseMoveSpeed = 15;
@@ -89,6 +92,8 @@ public class PlayerBase : Actor
     private float boostedJumpSpeed;
     private float jumpEarlyBuffer;
     private float coyoteJumpBuffer;
+    private float ledgegrabCooldown;
+    private float wallRunReactivationTimer;
 
     private bool sloping;
     private bool wasOnGround;
@@ -111,7 +116,14 @@ public class PlayerBase : Actor
 
     protected AnimatedSprite sprite = new();
 
-    public PlayerInputMapping InputMapping { get; } = new();
+    public PlayerInputMapping InputMapping { get; } = new() {
+        // Left = new MappedInput.GamePad(Buttons.LeftThumbstickLeft, PlayerIndex.One),
+        // Right = new MappedInput.GamePad(Buttons.LeftThumbstickRight, PlayerIndex.One),
+        // Up = new MappedInput.GamePad(Buttons.LeftThumbstickUp, PlayerIndex.One),
+        // Down = new MappedInput.GamePad(Buttons.LeftThumbstickDown, PlayerIndex.One),
+        // Jump = new MappedInput.GamePad(Buttons.A, PlayerIndex.One),
+        // Boost = new MappedInput.GamePad(Buttons.X, PlayerIndex.One),
+    };
 
     public bool UseGamePad { get; set; }
     public PlayerIndex GamePadIndex { get; set; }
@@ -208,6 +220,8 @@ public class PlayerBase : Actor
         else OnGround = CheckColliding(BottomEdge.Shift(0, 1));
 
         abilityCooldown = MathUtil.Approach(abilityCooldown, 0, Time.DeltaTime);
+        ledgegrabCooldown = MathUtil.Approach(ledgegrabCooldown, 0, Time.DeltaTime);
+        wallRunReactivationTimer = MathUtil.Approach(wallRunReactivationTimer, 0, Time.DeltaTime);
 
         if(OnGround)
         {
@@ -290,6 +304,12 @@ public class PlayerBase : Actor
             {
                 velocity.Y /= 4;
             }
+        }
+
+        if(!OnGround)
+        {
+            if(velocity.Y >= -2)
+                CheckLedgeGrab();
         }
 
         if (Input.GetDown(Keys.LeftControl))
@@ -507,6 +527,36 @@ public class PlayerBase : Actor
             jumpCount--;
     }
 
+    protected void CheckLedgeGrab()
+    {
+        var _w = Scene.CollisionSystem.SolidPlace(Hitbox.Shift(InputDir, 0));
+        if (canLedgeGrab && ledgegrabCooldown == 0 && _w is not null && !CheckColliding(Hitbox))
+        {
+            if(!CheckColliding(new((InputDir == 1) ? _w.Left + 1 : _w.Right - 1, _w.Top - 1, 1, 1), true)
+            && !CheckColliding(new((InputDir == 1) ? _w.Left - 2 : _w.Right + 2, _w.Top + 35, 1, 1), true))
+            {
+                if (Math.Sign(Top - _w.Top) <= 0 && !CheckColliding(new(Left, _w.Top - 1, Width, Height), true) && !CheckColliding(Hitbox.Shift(0, 2), true))
+                {
+                    // wallslideTimer = 0;
+                    State = BaseStates.LedgeGrab;
+
+                    Entity.Y = _w.Top - bboxOffset.Y;
+                    Entity.X = (InputDir == 1 ? _w.Left - Width : _w.Right) - bboxOffset.X;
+                    Facing = Math.Sign(_w.Left - Left);
+
+                    // SetHitbox(MaskLedge, PivotLedge);
+
+                    // // set animation
+                    // textureIndex = TextureIndex.LedgeGrab;
+
+                    // platformTarget = _w;
+
+                    return;
+                }
+            }
+        }
+    }
+
     protected virtual void OnLand()
     {
         // compensation for if player pressed jump slightly too early before landing
@@ -527,6 +577,47 @@ public class PlayerBase : Actor
                 break;
             case BaseStates.Dead:
                 velocity.X = MathHelper.Clamp(velocity.X, -8, 8);
+                break;
+            case BaseStates.WallRun:
+            {
+                velAtStartOfState = velocity;
+
+                velocity.X = 0;
+                velocity.Y = Math.Min(-30, -Math.Abs(velocity.X));
+
+                break;
+            }
+            case BaseStates.LedgeGrab:
+            {
+                velocity = Vector2.Zero;
+                if(Facing == 0) Facing = 1;
+
+                jumpCount++;
+
+                break;
+            }
+            case BaseStates.None: default:
+                break;
+        }
+    }
+
+    protected virtual void OnStateExit(string state)
+    {
+        switch(state)
+        {
+            case BaseStates.Normal:
+                break;
+            case BaseStates.Dead:
+                break;
+            case BaseStates.WallRun:
+            {
+                canBoost = true;
+                canWallJump = true;
+
+                break;
+            }
+            case BaseStates.LedgeGrab:
+                ledgegrabCooldown = 15/60f;
                 break;
             case BaseStates.None: default:
                 break;
@@ -601,7 +692,21 @@ public class PlayerBase : Actor
 
                 FxTrail = Math.Abs(velocity.X) > 10;
 
-                // ...
+                var edge = InputDir >= 0 ? RightEdge : LeftEdge;
+
+                // check for and initiate wallRun
+                if (InputDir != 0
+                    && !OnGround
+                    && Math.Sign(velocity.X) == Math.Sign(InputDir)
+                    && ((Math.Abs(velocity.X) > moveSpeed * 1.5f) || wallRunReactivationTimer > 0)
+                    && velocity.Y < 10
+                    && CheckColliding(edge.Shift((int)moveSpeed * InputDir, 0), true)
+                    && CheckColliding(edge.Shift((int)moveSpeed * InputDir, -15), true))
+                {
+                    MoveX(moveSpeed * InputDir, null);
+                    Facing = InputDir;
+                    State = BaseStates.WallRun;
+                }
 
                 break;
             }
@@ -619,19 +724,69 @@ public class PlayerBase : Actor
                 break;
             }
 
-            case BaseStates.None: default:
-                break;
-        }
-    }
+            case BaseStates.WallRun:
+            {
+                canJump = false;
+                canBoost = false;
+                canWallJump = false;
+                jumpSpeed = 0.75f * baseJumpSpeed;
 
-    protected virtual void OnStateExit(string state)
-    {
-        switch(state)
-        {
-            case BaseStates.Normal:
+                FxTrail = true;
+
+                if(velocity.Y > -5)
+                {
+                    State = BaseStates.Normal;
+                    break;
+                }
+
+                if(InputMapping.Jump.Pressed && InputDir == -Facing)
+                {
+                    wallRunReactivationTimer = 0.5f;
+                    jumpSpeed = 0.5f * baseJumpSpeed;
+                    canWallJump = true;
+                    TryWallJump(3f);
+                    break;
+                }
+
+                if(!CheckColliding(BottomEdge.Shift(Facing, 0), true))
+                {
+                    if (InputDir == Facing || InputDir == 0)
+                    {
+                        State = BaseStates.Normal;
+                        velocity.Y = MathHelper.Max(velocity.Y, jumpSpeed * 0.3f);
+
+                        if(InputDir != 0)
+                            velocity.X = velAtStartOfState.X * 0.65f;
+                    }
+                    else
+                    {
+                        jumpSpeed = 1.5f * baseJumpSpeed;
+                        canWallJump = true;
+                        TryWallJump(0);
+                        velocity.X = Math.Max(Math.Abs(velAtStartOfState.X) * 0.6f, 15) * InputDir;
+                    }
+                    break;
+                }
+
+                if(CheckColliding(TopEdge.Shift(0, (int)velocity.Y), true))
+                {
+                    State = BaseStates.Normal;
+                    break;
+                }
+
                 break;
-            case BaseStates.Dead:
+            }
+
+            case BaseStates.LedgeGrab:
+            {
+                useGravity = false;
+                canBoost = false;
+                canLedgeGrab = false;
+                canWallJump = false;
+
                 break;
+            }
+
             case BaseStates.None: default:
                 break;
         }
@@ -754,6 +909,7 @@ public class PlayerBase : Actor
         canJump = true;
         canWallJump = true;
         canUseAbility = true;
+        canLedgeGrab = true;
 
         accel = baseGroundAcceleration;
         fric = baseGroundFriction;
@@ -903,6 +1059,6 @@ public class PlayerInputMapping
     public MappedInput Up { get; set; } = new MappedInput.Keyboard(Keys.W);
     public MappedInput Jump { get; set; } = new MappedInput.Keyboard(Keys.Space);
     public MappedInput Boost { get; set; } = new MappedInput.Keyboard(Keys.LeftShift);
-    public MappedInput UseMobilityTool { get; set; } = new MappedInput.Mouse(MouseButtons.LeftButton);
+    public MappedInput UseAbility { get; set; } = new MappedInput.Mouse(MouseButtons.LeftButton);
     public MappedInput UseItem { get; set; } = new MappedInput.Mouse(MouseButtons.RightButton);
 }
