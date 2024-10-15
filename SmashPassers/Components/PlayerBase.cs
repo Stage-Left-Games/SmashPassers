@@ -592,7 +592,7 @@ public class PlayerBase : Actor
                 velAtStartOfState = velocity;
 
                 velocity.X = 0;
-                velocity.Y = Math.Min(-30, -Math.Abs(velocity.X));
+                velocity.Y = Math.Min(-30, -Math.Abs(velocity.X) / 2);
 
                 break;
             }
@@ -601,7 +601,7 @@ public class PlayerBase : Actor
                 velocity = Vector2.Zero;
                 if(Facing == 0) Facing = 1;
 
-                jumpCount++;
+                jumpCount  = baseJumpCount - 1;
 
                 break;
             }
@@ -703,7 +703,7 @@ public class PlayerBase : Actor
                     && !OnGround
                     && Math.Sign(velocity.X) == Math.Sign(InputDir)
                     && ((Math.Abs(velocity.X) > moveSpeed) || wallRunReactivationTimer > 0)
-                    && velocity.Y < 10
+                    && velocity.Y < 20f
                     && CheckColliding(edge.Shift((int)moveSpeed * InputDir, 0), true)
                     && CheckColliding(edge.Shift((int)moveSpeed * InputDir, -15), true))
                 {
@@ -749,7 +749,8 @@ public class PlayerBase : Actor
                 if(InputMapping.Jump.Pressed)
                 {
                     wallRunReactivationTimer = 0.5f; // half a second
-                    jumpSpeed = 0.5f * baseJumpSpeed;
+                    // jumpSpeed = 0.5f * baseJumpSpeed;
+                    jumpSpeed = velocity.Y - 5f;
                     canWallJump = true;
                     TryWallJump(3f);
                     break;
@@ -848,67 +849,77 @@ public class PlayerBase : Actor
             spaceSize: 6,
             rotation: 0,
             origin: Vector2.Zero,
-            scale: 4
+            scale: 2
         );
         Renderer.SpriteBatch.DrawStringSpacesFix(
             GraphicsUtilities.Fonts.RegularFont,
             text: $"Horizontal:{(velocity.X >= 0 ? " " : "")}{velocity.X:F2} px",
+            position: new Vector2(4, 20),
+            color: Color.White,
+            spaceSize: 6,
+            rotation: 0,
+            origin: Vector2.Zero,
+            scale: 2
+        );
+        Renderer.SpriteBatch.DrawStringSpacesFix(
+            GraphicsUtilities.Fonts.RegularFont,
+            text: $"Vertical:{(velocity.Y >= 0 ? " " : "")}{SpeedConverter.PpfToKph(velocity.Y):F2} km/h",
             position: new Vector2(4, 40),
             color: Color.White,
             spaceSize: 6,
             rotation: 0,
             origin: Vector2.Zero,
-            scale: 4
+            scale: 2
         );
         Renderer.SpriteBatch.DrawStringSpacesFix(
             GraphicsUtilities.Fonts.RegularFont,
-            text: $"Vertical:{(velocity.Y >= 0 ? " " : "")}{SpeedConverter.PpfToKph(velocity.Y):F2} km/h",
+            text: $"Vertical: {(velocity.Y >= 0 ? " " : "")}{velocity.Y:F2} px",
+            position: new Vector2(4, 60),
+            color: Color.White,
+            spaceSize: 6,
+            rotation: 0,
+            origin: Vector2.Zero,
+            scale: 2
+        );
+        Renderer.SpriteBatch.DrawStringSpacesFix(
+            GraphicsUtilities.Fonts.RegularFont,
+            text: $"Gravity: {SpeedConverter.PpfToKph(Gravity) / 3.6f :F2} m/s",
             position: new Vector2(4, 80),
             color: Color.White,
             spaceSize: 6,
             rotation: 0,
             origin: Vector2.Zero,
-            scale: 4
+            scale: 2
         );
         Renderer.SpriteBatch.DrawStringSpacesFix(
             GraphicsUtilities.Fonts.RegularFont,
-            text: $"Vertical: {(velocity.Y >= 0 ? " " : "")}{velocity.Y:F2} px",
+            text: $"State: {_state}",
+            position: new Vector2(4, 100),
+            color: Color.White,
+            spaceSize: 6,
+            rotation: 0,
+            origin: Vector2.Zero,
+            scale: 2
+        );
+        Renderer.SpriteBatch.DrawStringSpacesFix(
+            GraphicsUtilities.Fonts.RegularFont,
+            text: $"Sloping: {sloping}",
             position: new Vector2(4, 120),
             color: Color.White,
             spaceSize: 6,
             rotation: 0,
             origin: Vector2.Zero,
-            scale: 4
+            scale: 2
         );
         Renderer.SpriteBatch.DrawStringSpacesFix(
             GraphicsUtilities.Fonts.RegularFont,
-            text: $"Gravity: {SpeedConverter.PpfToKph(Gravity) / 3.6f :F2} m/s",
-            position: new Vector2(4, 160),
+            text: $"BoostCount: {boostCount}",
+            position: new Vector2(4, 140),
             color: Color.White,
             spaceSize: 6,
             rotation: 0,
             origin: Vector2.Zero,
-            scale: 4
-        );
-        Renderer.SpriteBatch.DrawStringSpacesFix(
-            GraphicsUtilities.Fonts.RegularFont,
-            text: $"State: {_state}",
-            position: new Vector2(4, 200),
-            color: Color.White,
-            spaceSize: 6,
-            rotation: 0,
-            origin: Vector2.Zero,
-            scale: 4
-        );
-        Renderer.SpriteBatch.DrawStringSpacesFix(
-            GraphicsUtilities.Fonts.RegularFont,
-            text: $"Sloping: {sloping}",
-            position: new Vector2(4, 240),
-            color: Color.White,
-            spaceSize: 6,
-            rotation: 0,
-            origin: Vector2.Zero,
-            scale: 4
+            scale: 2
         );
     }
 

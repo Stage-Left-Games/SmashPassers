@@ -21,7 +21,7 @@
 			"levelIid": "eebcf660-73f0-11ef-81a7-7163479ae4c0",
 			"layerIid": "9007f170-73f0-11ef-bc88-5bd00a261955",
 			"entityIid": "e44bc040-73f0-11ef-bc88-5b57bb3316ff"
-		}, "worldX": 1545, "worldY": 3870, "widPx": 30, "heiPx": 30, "fields" : {} }]
+		}, "worldX": 1485, "worldY": 3870, "widPx": 30, "heiPx": 30, "fields" : {} }]
 	}],
 	"worldLayout": "LinearHorizontal",
 	"worldGridWidth": 256,
@@ -502,14 +502,14 @@
 			"fillOpacity": 0.08,
 			"lineOpacity": 0,
 			"hollow": false,
-			"color": "#252525",
+			"color": "#124E89",
 			"renderMode": "Tile",
 			"showName": true,
 			"tilesetId": 5,
-			"tileRenderMode": "NineSlice",
-			"tileRect": { "tilesetUid": 5, "x": 384, "y": 64, "w": 16, "h": 16 },
+			"tileRenderMode": "FitInside",
+			"tileRect": { "tilesetUid": 5, "x": 176, "y": 80, "w": 16, "h": 16 },
 			"uiTileRect": null,
-			"nineSliceBorders": [3,2,3,2],
+			"nineSliceBorders": [],
 			"maxCount": 0,
 			"limitScope": "PerLevel",
 			"limitBehavior": "MoveLastOne",
