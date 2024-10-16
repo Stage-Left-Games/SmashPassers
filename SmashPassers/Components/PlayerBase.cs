@@ -683,7 +683,7 @@ public class PlayerBase : Actor
 
                 if (OnGround)
                 {
-                    if (onJumpthrough && velocity.Y == 0 && InputMapping.Down.IsDown && !CheckColliding(BottomEdge.Shift(new(0, 2)), true))
+                    if (onJumpthrough && velocity.Y == 0 && InputMapping.Down.IsDown && InputMapping.Jump.Pressed && !CheckColliding(BottomEdge.Shift(new(0, 2)), true))
                     {
                         Entity.Y += 2;
 
