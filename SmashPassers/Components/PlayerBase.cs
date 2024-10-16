@@ -101,6 +101,7 @@ public class PlayerBase : Actor
     private bool onJumpthrough;
 
     protected bool CanGroundPoundBoost { get; set; } = true;
+    protected bool PassThroughPlatformsEasily { get; set; } = true;
 
     protected bool IsRunning { get; private set; }
     protected int InputDir { get; private set; }
@@ -1017,7 +1018,7 @@ public class PlayerBase : Actor
             int maxNudge = 5;
 
             int sign = Math.Sign(move);
-            bool ignoreJumpthrus = sign < 0 || InputMapping.Down.IsDown;
+            bool ignoreJumpthrus = sign < 0 || (InputMapping.Down.IsDown && PassThroughPlatformsEasily);
 
             while(move != 0)
             {
