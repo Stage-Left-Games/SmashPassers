@@ -26,7 +26,8 @@ public class NecoPlayer : PlayerBase
             TexturePath = "Images/Characters/neco/neco_0",
         });
         AddAnimation(new("run") {
-            TexturePath = "Images/Characters/neco/neco_0",
+            TexturePath = "Images/Characters/neco/neco_1",
+            Frames = {new(), new(), new(), new(), new(), new(), new(), new()}, // 8 default frames
         });
         AddAnimation(new("skid") {
             TexturePath = "Images/Characters/neco/neco_0",
