@@ -82,6 +82,7 @@ public class PlayerBase : Actor
     protected bool jumpCancel;
 
     protected float moveSpeed;
+    protected float directMoveSpd; // move speed regardless of angle
     protected float jumpSpeed;
     protected int jumpCount;
     protected int boostCount;
@@ -362,7 +363,7 @@ public class PlayerBase : Actor
         //     velocity.Y = 0;
         // }
 
-        if (FxTrail)
+        if (FxTrail) // imagen fantasma
         {
             fxTrailCounter++;
             if (fxTrailCounter >= 3)
@@ -373,8 +374,8 @@ public class PlayerBase : Actor
                     TexturePath = sprite.CurrentAnimation.ActiveTexturePath,
                     Position = Entity.Position.ToVector2() + sprite.CurrentAnimation.ActiveOffset,
                     SpriteEffects = sprite.CurrentAnimation.SpriteEffects,
-                    Scale = sprite.CurrentAnimation.ActiveScale,
-                    Color = Color.Red,
+                    Scale = sprite.CurrentAnimation.ActiveScale * 0.95f,
+                    Color = Color.Lerp(Color.Cyan, Color.Red, Math.Abs(velocity.X) / 30),
                     Rotation = sprite.CurrentAnimation.ActiveRotation,
                     Pivot = sprite.CurrentAnimation.ActivePivot,
                     Alpha = 0.95f * sprite.CurrentAnimation.ActiveAlpha
@@ -464,7 +465,7 @@ public class PlayerBase : Actor
     {
         if (velocity.Y > 0)
         {
-            if (InputMapping.Pound.IsDown)
+            if (InputMapping.Down.IsDown)
             {
                 if (CanGroundPoundBoost && (!sloping || Math.Sign(Entity.X - lastPosition.X) != InputDir))
                 {
@@ -1025,12 +1026,12 @@ public class PlayerBase : Actor
             int sign = Math.Sign(move);
             bool ignoreJumpthrus = sign < 0 || (InputMapping.Down.IsDown && PassThroughPlatformsEasily);
 
-            while(move != 0)
+            while(move != 0)                                                                                            
             {
-                var rect = (sign >= 0 ? BottomEdge : TopEdge).Shift(0, sign);
-                if (CheckColliding(rect, ignoreJumpthrus))
+                var rect = (sign >= 0 ? BottomEdge : TopEdge).Shift(0, sign);                                           
+                if (CheckColliding(rect, ignoreJumpthrus))                                                              
                 {
-                    if (InputMapping.Down.IsDown && !CheckColliding(rect.Shift(maxNudge, 0), ignoreJumpthrus))
+                    if (InputMapping.Down.IsDown && !CheckColliding(rect.Shift(maxNudge, 0), ignoreJumpthrus))          
                     {
                         sloping = true;
                         velocity.X += 0.01f;
