@@ -79,6 +79,7 @@ public class PlayerBase : Actor
     protected bool canWallJump;
     protected bool canLedgeGrab;
     protected bool useGravity;
+    protected bool jumpCancel;
 
     protected float moveSpeed;
     protected float jumpSpeed;
@@ -237,6 +238,7 @@ public class PlayerBase : Actor
             boostCount = baseBoostCount;
             coyoteJumpBuffer = 10/60f;
             boostedJumpTimer = MathUtil.Approach(boostedJumpTimer, 0, Time.DeltaTime);
+            jumpCancel = false;
         }
         else
         {
@@ -301,11 +303,11 @@ public class PlayerBase : Actor
             }
         }
 
-        if (!OnGround && canJump)
+        if (!OnGround && canJump) // jump cancel
         {
-            if (InputMapping.Jump.Released && velocity.Y < 0)
+            if (InputMapping.Jump.Released && velocity.Y < 0 || jumpCancel == true)
             {
-                velocity.Y /= 4;
+                velocity.Y /= 20;
             }
         }
 
@@ -372,10 +374,10 @@ public class PlayerBase : Actor
                     Position = Entity.Position.ToVector2() + sprite.CurrentAnimation.ActiveOffset,
                     SpriteEffects = sprite.CurrentAnimation.SpriteEffects,
                     Scale = sprite.CurrentAnimation.ActiveScale,
-                    Color = sprite.CurrentAnimation.ActiveColor,
+                    Color = Color.Red,
                     Rotation = sprite.CurrentAnimation.ActiveRotation,
                     Pivot = sprite.CurrentAnimation.ActivePivot,
-                    Alpha = 0.75f * sprite.CurrentAnimation.ActiveAlpha
+                    Alpha = 0.95f * sprite.CurrentAnimation.ActiveAlpha
                 });
             }
         }
@@ -462,7 +464,7 @@ public class PlayerBase : Actor
     {
         if (velocity.Y > 0)
         {
-            if (InputMapping.Down.IsDown)
+            if (InputMapping.Pound.IsDown)
             {
                 if (CanGroundPoundBoost && (!sloping || Math.Sign(Entity.X - lastPosition.X) != InputDir))
                 {
@@ -502,6 +504,7 @@ public class PlayerBase : Actor
             boostCount = baseBoostCount;
 
             // walljump sfx / animation
+            // AnimationId = "jump";
 
             return true;
         }
@@ -516,6 +519,7 @@ public class PlayerBase : Actor
             boostCount = baseBoostCount;
 
             // walljump sfx / animation
+            // AnimationId = "jump";
 
             return true;
         }
@@ -532,6 +536,7 @@ public class PlayerBase : Actor
         velocity.Y = jumpSpeed * multiplier;
 
         // begin jump animation, play sfx
+        // AnimationId = "jump";
 
         if(subtractJumps)
             jumpCount--;
@@ -557,7 +562,7 @@ public class PlayerBase : Actor
                     // SetHitbox(MaskLedge, PivotLedge);
 
                     // // set animation
-                    // textureIndex = TextureIndex.LedgeGrab;
+                    // AnimationId = "ledge";
 
                     // platformTarget = _w;
 
@@ -1082,6 +1087,7 @@ public class PlayerInputMapping
     public MappedInput Down { get; set; } = new MappedInput.Keyboard(Keys.S);
     public MappedInput Up { get; set; } = new MappedInput.Keyboard(Keys.W);
     public MappedInput Jump { get; set; } = new MappedInput.Keyboard(Keys.Space);
+    public MappedInput Pound { get; set; } = new MappedInput.Keyboard(Keys.LeftControl);
     public MappedInput Boost { get; set; } = new MappedInput.Mouse(MouseButtons.LeftButton);
     public MappedInput UseAbility { get; set; } = new MappedInput.Mouse(MouseButtons.LeftButton);
     public MappedInput UseItem { get; set; } = new MappedInput.Mouse(MouseButtons.RightButton);
