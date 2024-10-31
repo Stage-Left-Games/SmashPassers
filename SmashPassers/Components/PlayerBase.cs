@@ -18,6 +18,7 @@ public class PlayerBase : Actor
 {
     public const float Gravity = 20;
     public const float TerminalVelocity = 23.15f;
+    
 
     private static readonly Vector2 _defaultPivot = new(240, 332);
 
@@ -647,6 +648,7 @@ public class PlayerBase : Actor
         {
             case BaseStates.Normal:
             {
+                // this is where movement takes place
                 if(InputDir != 0)
                 {
                     Facing = InputDir;
@@ -928,6 +930,8 @@ public class PlayerBase : Actor
             origin: Vector2.Zero,
             scale: 2
         );
+        
+        Renderer.SpriteBatch.DrawLine(Input.MousePosition.ToVector2(), Center.ToVector2() - Main.Camera.Position, Color.Red);
     }
 
     private void RecalculateStats()
