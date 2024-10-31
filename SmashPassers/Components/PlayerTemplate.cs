@@ -2,7 +2,7 @@ using Microsoft.Xna.Framework;
 
 namespace SmashPassers.Components;
 
-public class NecoPlayer : PlayerBase
+public class PlayerTemplate : PlayerBase
 {
     private Rectangle MaskNormal = new(-32/2, -70, 32, 70);
     private Point PivotNormal = DefaultPivot.ToPoint();
@@ -26,7 +26,8 @@ public class NecoPlayer : PlayerBase
             TexturePath = "Images/Characters/neco/neco_0",
         });
         AddAnimation(new("run") {
-            TexturePath = "Images/Characters/neco/neco_0",
+            TexturePath = "Images/Characters/neco/neco_1",
+            Frames = {new(), new(), new(), new(), new(), new(), new(), new()}, // 8 default frames
         });
         AddAnimation(new("skid") {
             TexturePath = "Images/Characters/neco/neco_0",

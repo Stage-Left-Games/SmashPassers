@@ -183,6 +183,8 @@ public class Main : Game
 
         Scene?.DrawUI();
 
+        
+
         Renderer.EndDrawUI();
         Renderer.FinalizeDraw();
 

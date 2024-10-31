@@ -18,6 +18,7 @@ public class PlayerBase : Actor
 {
     public const float Gravity = 20;
     public const float TerminalVelocity = 23.15f;
+    
 
     private static readonly Vector2 _defaultPivot = new(240, 332);
 
@@ -79,8 +80,10 @@ public class PlayerBase : Actor
     protected bool canWallJump;
     protected bool canLedgeGrab;
     protected bool useGravity;
+    protected bool jumpCancel;
 
     protected float moveSpeed;
+    protected float directMoveSpd; // move speed regardless of angle
     protected float jumpSpeed;
     protected int jumpCount;
     protected int boostCount;
@@ -237,6 +240,7 @@ public class PlayerBase : Actor
             boostCount = baseBoostCount;
             coyoteJumpBuffer = 10/60f;
             boostedJumpTimer = MathUtil.Approach(boostedJumpTimer, 0, Time.DeltaTime);
+            jumpCancel = false;
         }
         else
         {
@@ -301,11 +305,11 @@ public class PlayerBase : Actor
             }
         }
 
-        if (!OnGround && canJump)
+        if (!OnGround && canJump) // jump cancel
         {
-            if (InputMapping.Jump.Released && velocity.Y < 0)
+            if (InputMapping.Jump.Released && velocity.Y < 0 || jumpCancel == true)
             {
-                velocity.Y /= 4;
+                velocity.Y /= 20;
             }
         }
 
@@ -360,7 +364,7 @@ public class PlayerBase : Actor
         //     velocity.Y = 0;
         // }
 
-        if (FxTrail)
+        if (FxTrail) // imagen fantasma
         {
             fxTrailCounter++;
             if (fxTrailCounter >= 3)
@@ -371,11 +375,11 @@ public class PlayerBase : Actor
                     TexturePath = sprite.CurrentAnimation.ActiveTexturePath,
                     Position = Entity.Position.ToVector2() + sprite.CurrentAnimation.ActiveOffset,
                     SpriteEffects = sprite.CurrentAnimation.SpriteEffects,
-                    Scale = sprite.CurrentAnimation.ActiveScale,
-                    Color = sprite.CurrentAnimation.ActiveColor,
+                    Scale = sprite.CurrentAnimation.ActiveScale * 0.95f,
+                    Color = Color.Lerp(Color.Cyan, Color.Red, Math.Abs(velocity.X) / 30),
                     Rotation = sprite.CurrentAnimation.ActiveRotation,
                     Pivot = sprite.CurrentAnimation.ActivePivot,
-                    Alpha = 0.75f * sprite.CurrentAnimation.ActiveAlpha
+                    Alpha = 0.95f * sprite.CurrentAnimation.ActiveAlpha
                 });
             }
         }
@@ -502,6 +506,7 @@ public class PlayerBase : Actor
             boostCount = baseBoostCount;
 
             // walljump sfx / animation
+            // AnimationId = "jump";
 
             return true;
         }
@@ -516,6 +521,7 @@ public class PlayerBase : Actor
             boostCount = baseBoostCount;
 
             // walljump sfx / animation
+            // AnimationId = "jump";
 
             return true;
         }
@@ -532,6 +538,7 @@ public class PlayerBase : Actor
         velocity.Y = jumpSpeed * multiplier;
 
         // begin jump animation, play sfx
+        // AnimationId = "jump";
 
         if(subtractJumps)
             jumpCount--;
@@ -557,7 +564,7 @@ public class PlayerBase : Actor
                     // SetHitbox(MaskLedge, PivotLedge);
 
                     // // set animation
-                    // textureIndex = TextureIndex.LedgeGrab;
+                    // AnimationId = "ledge";
 
                     // platformTarget = _w;
 
@@ -641,6 +648,7 @@ public class PlayerBase : Actor
         {
             case BaseStates.Normal:
             {
+                // this is where movement takes place
                 if(InputDir != 0)
                 {
                     Facing = InputDir;
@@ -922,6 +930,8 @@ public class PlayerBase : Actor
             origin: Vector2.Zero,
             scale: 2
         );
+        
+        Renderer.SpriteBatch.DrawLine(Input.MousePosition.ToVector2(), Center.ToVector2() - Main.Camera.Position, Color.Red);
     }
 
     private void RecalculateStats()
@@ -1020,12 +1030,12 @@ public class PlayerBase : Actor
             int sign = Math.Sign(move);
             bool ignoreJumpthrus = sign < 0 || (InputMapping.Down.IsDown && PassThroughPlatformsEasily);
 
-            while(move != 0)
+            while(move != 0)                                                                                            
             {
-                var rect = (sign >= 0 ? BottomEdge : TopEdge).Shift(0, sign);
-                if (CheckColliding(rect, ignoreJumpthrus))
+                var rect = (sign >= 0 ? BottomEdge : TopEdge).Shift(0, sign);                                           
+                if (CheckColliding(rect, ignoreJumpthrus))                                                              
                 {
-                    if (InputMapping.Down.IsDown && !CheckColliding(rect.Shift(maxNudge, 0), ignoreJumpthrus))
+                    if (InputMapping.Down.IsDown && !CheckColliding(rect.Shift(maxNudge, 0), ignoreJumpthrus))          
                     {
                         sloping = true;
                         velocity.X += 0.01f;
@@ -1082,6 +1092,7 @@ public class PlayerInputMapping
     public MappedInput Down { get; set; } = new MappedInput.Keyboard(Keys.S);
     public MappedInput Up { get; set; } = new MappedInput.Keyboard(Keys.W);
     public MappedInput Jump { get; set; } = new MappedInput.Keyboard(Keys.Space);
+    public MappedInput Pound { get; set; } = new MappedInput.Keyboard(Keys.LeftControl);
     public MappedInput Boost { get; set; } = new MappedInput.Mouse(MouseButtons.LeftButton);
     public MappedInput UseAbility { get; set; } = new MappedInput.Mouse(MouseButtons.LeftButton);
     public MappedInput UseItem { get; set; } = new MappedInput.Mouse(MouseButtons.RightButton);
