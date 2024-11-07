@@ -1,17 +1,12 @@
-using System.Collections.Generic;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-
 using Microsoft.Xna.Framework;
 
-using Jelly;
-using Jelly.Serialization;
+namespace SmashPassers.Components;
 
-namespace SmashPassers.GameContent;
-
-[JsonAutoPolymorphic]
-
-public class BoostAbility
+public class BoostAbility : AbilityBase
 {
-    // IDK!!!!! HELP!!!!
+    public override void OnActivate(PlayerBase player)
+    {
+        base.OnActivate(player);
+        
+    }
 }
