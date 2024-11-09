@@ -16,8 +16,6 @@ namespace SmashPassers.Components;
 
 public class AbilityBase : Component
 {
-    public void OnActivate()
-    {
-        
-    }
+    public virtual void OnActivate(PlayerBase player){} // LOL!!!
+
 }
